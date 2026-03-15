@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 241, 245, 249;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 2, 6, 23;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+  min-height: 100vh;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl transition-all duration-300;
+  }
+  
+  .glass-card:hover {
+    @apply border-aurora-cyan/30 shadow-[0_0_30px_rgba(34,211,238,0.1)];
+  }
+
+  .aurora-text {
+    @apply bg-clip-text text-transparent bg-aurora-gradient font-extrabold;
+  }
+
+  .aurora-glow {
+    @apply relative overflow-hidden;
+  }
+
+  .aurora-glow::before {
+    content: '';
+    @apply absolute -top-[50%] -left-[50%] w-[200%] h-[200%] opacity-20 pointer-events-none;
+    background: radial-gradient(circle at center, #22d3ee 0%, transparent 50%);
+    animation: pulse 8s infinite alternate;
+  }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1) translate(0, 0); opacity: 0.1; }
+  100% { transform: scale(1.2) translate(5%, 5%); opacity: 0.3; }
+}

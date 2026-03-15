@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    /* config options here */
+    optimizeFonts: false, // Disables static font fetching which can fail in secure Codespaces
 };
 
 export default nextConfig;
+

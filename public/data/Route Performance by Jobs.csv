@@ -1,0 +1,237 @@
+﻿short_name,route_type,num_stops,total_jobs_fmt,top_sector
+701,bus_high_freq,87,"112,805",Public administration
+002,bus_high_freq,152,"110,811",Public administration
+008,bus_high_freq,145,"105,990",Public administration
+005,bus_high_freq,107,"101,441",Public administration
+523,bus_high_freq,103,"99,230",Public administration
+201,bus_regular,46,"97,993",Public administration
+900X,bus_regular,25,"97,457",Public administration
+560,bus_regular,57,"97,334",Public administration
+009,bus_high_freq,108,"95,611",Public administration
+120X,bus_regular,35,"93,145",Public administration
+111,bus_regular,124,"92,725",Public administration
+Capital,lrt,34,"92,707",Public administration
+130X,bus_regular,60,"90,161",Public administration
+150X,bus_regular,74,"89,022",Public administration
+Metro,lrt,21,"87,088",Public administration
+007,bus_high_freq,76,"80,875",Public administration
+901,bus_high_freq,64,"80,492",Public administration
+110X,bus_high_freq,38,"80,089",Public administration
+511,bus_regular,52,"74,057",Public administration
+500X,bus_regular,25,"71,771",Public administration
+001,bus_high_freq,77,"69,806",Public administration
+Valley,lrt,24,"65,344",Public administration
+411,bus_regular,24,"63,212",Public administration
+211,bus_regular,17,"63,080",Public administration
+401,bus_regular,16,"62,824",Public administration
+054,bus_high_freq,122,"60,432",Retail trade
+907,bus_regular,92,"57,066",Retail trade
+906,bus_regular,85,"53,907",Retail trade
+205,bus_regular,40,"53,008",Retail trade
+208,bus_regular,19,"47,225",Public administration
+004,bus_high_freq,139,"46,988",Accommodation and food services
+403,bus_regular,18,"44,216",Public administration
+908,bus_regular,61,"42,775",Construction
+413,bus_regular,16,"42,410",Public administration
+052,bus_regular,121,"39,757",Retail trade
+503,bus_regular,46,"38,947",Construction
+903,bus_high_freq,67,"37,577",Retail trade
+902,bus_regular,48,"37,385",Health care and social assistance
+053,bus_regular,97,"36,952",Construction
+006,bus_high_freq,40,"36,569",Retail trade
+507,bus_regular,111,"35,397",Retail trade
+905,bus_regular,88,"34,435",Retail trade
+055,bus_high_freq,49,"32,472",Retail trade
+925,bus_regular,65,"32,079",Retail trade
+056,bus_high_freq,133,"31,558",Retail trade
+684,bus_regular,104,"28,557",Retail trade
+526,bus_regular,51,"25,755",Retail trade
+914,bus_regular,61,"25,656",Retail trade
+202,bus_regular,38,"25,608",Public administration
+921,bus_regular,38,"24,848",Retail trade
+504,bus_regular,46,"24,624",Manufacturing
+656,bus_regular,30,"23,847",Accommodation and food services
+637,bus_regular,62,"23,571",Accommodation and food services
+912,bus_regular,30,"22,984",Retail trade
+631,bus_regular,75,"22,214",Construction
+501,bus_regular,80,"22,096",Construction
+518,bus_high_freq,94,"21,670",Accommodation and food services
+502,bus_regular,22,"21,601",Construction
+003,bus_high_freq,45,"21,278",Health care and social assistance
+692,bus_regular,3,"21,159",Retail trade
+519,bus_regular,93,"21,059",Accommodation and food services
+704,bus_regular,18,"20,890",Retail trade
+505,bus_regular,26,"20,503",Manufacturing
+140X,bus_regular,86,"20,311",Retail trade
+506,bus_regular,70,"19,916",Manufacturing
+103,bus_high_freq,126,"19,822",Health care and social assistance
+521,bus_regular,89,"19,341",Accommodation and food services
+051,bus_regular,82,"19,333",Health care and social assistance
+652,bus_regular,22,"19,028",Retail trade
+404,bus_regular,15,"18,378",Accommodation and food services
+904,bus_regular,89,"18,287",Retail trade
+102,bus_regular,98,"18,271",Retail trade
+512,bus_regular,38,"17,509",Retail trade
+915,bus_regular,46,"16,672",Retail trade
+920X,bus_regular,15,"16,566",Retail trade
+635,bus_regular,113,"15,805",Retail trade
+924,bus_regular,56,"15,755",Retail trade
+909,bus_regular,45,"15,539",Retail trade
+633,bus_regular,54,"15,456",Retail trade
+124,bus_regular,111,"14,895",Retail trade
+916,bus_high_freq,98,"13,873",Retail trade
+106,bus_high_freq,76,"13,801",Retail trade
+114,bus_high_freq,74,"13,723",Retail trade
+723,bus_regular,31,"13,556",Health care and social assistance
+705,bus_regular,39,"12,873",Retail trade
+203,bus_regular,21,"12,747",Health care and social assistance
+691,bus_regular,9,"12,699",Public administration
+917,bus_regular,90,"12,262",Retail trade
+683,bus_regular,93,"12,093",Retail trade
+527,bus_regular,54,"12,019",Health care and social assistance
+913,bus_regular,47,"11,910",Retail trade
+636,bus_regular,30,"11,817",Construction
+923,bus_regular,37,"11,715",Retail trade
+664,bus_regular,85,"11,593",Accommodation and food services
+918,bus_regular,50,"11,470",Retail trade
+654,bus_regular,25,"11,337",Health care and social assistance
+661,bus_regular,14,"11,308",Retail trade
+681,bus_regular,5,"11,264",Retail trade
+630,bus_regular,94,"11,173",Retail trade
+671,bus_regular,15,"11,124",Retail trade
+709,bus_high_freq,41,"11,016",Retail trade
+031,bus_regular,22,"10,872",Health care and social assistance
+127,bus_regular,68,"10,663",Retail trade
+634,bus_regular,69,"10,578",Retail trade
+109,bus_regular,127,"10,569",Retail trade
+632,bus_regular,10,"10,150",Construction
+674,bus_regular,14,"10,075",Retail trade
+665,bus_regular,94,"9,898",Accommodation and food services
+107,bus_high_freq,94,"9,729",Retail trade
+716,bus_regular,59,"9,304",Accommodation and food services
+627,bus_regular,101,"9,085",Retail trade
+653,bus_regular,2,"9,069",Construction
+104,bus_regular,52,"9,054",Retail trade
+673,bus_regular,11,"8,831",Retail trade
+676,bus_regular,38,"8,814",Retail trade
+638,bus_regular,62,"8,781",Health care and social assistance
+717,bus_regular,83,"8,753",Accommodation and food services
+625,bus_regular,97,"8,621",Retail trade
+516,bus_high_freq,59,"8,531",Retail trade
+108,bus_high_freq,78,"8,473",Retail trade
+522,bus_regular,69,"8,421",Retail trade
+515,bus_high_freq,59,"8,399",Retail trade
+509,bus_high_freq,87,"8,289",Health care and social assistance
+113,bus_regular,69,"8,175",Retail trade
+660,bus_regular,22,"8,026",Retail trade
+508,bus_regular,58,"7,878",Retail trade
+119,bus_regular,86,"7,476",Retail trade
+682,bus_regular,68,"7,356",Health care and social assistance
+204,bus_regular,15,"7,279",Health care and social assistance
+718,bus_regular,51,"7,105",Accommodation and food services
+618,bus_regular,96,"7,079",Retail trade
+610,bus_regular,61,"7,007",Retail trade
+707,bus_regular,36,"6,903",Retail trade
+702,bus_regular,31,"6,808",Retail trade
+101,bus_regular,64,"6,795",Health care and social assistance
+708,bus_regular,38,"6,714",Retail trade
+525,bus_regular,30,"6,539",Accommodation and food services
+614,bus_regular,58,"6,501",Retail trade
+646,bus_regular,22,"6,462",Health care and social assistance
+624,bus_regular,64,"6,428",Retail trade
+513,bus_regular,28,"6,425",Health care and social assistance
+626,bus_regular,84,"6,323",Retail trade
+118,bus_regular,100,"6,307",Retail trade
+128,bus_regular,29,"6,097",Retail trade
+117,bus_regular,71,"5,856",Retail trade
+613,bus_regular,60,"5,751",Retail trade
+910X,bus_regular,37,"5,743",Public administration
+655,bus_regular,3,"5,723",Public administration
+715,bus_regular,72,"5,716",Accommodation and food services
+112,bus_regular,56,"5,680",Accommodation and food services
+612,bus_regular,106,"5,670",Retail trade
+657,bus_regular,6,"5,553",Accommodation and food services
+706,bus_regular,44,"5,475",Retail trade
+712,bus_regular,22,"5,470",Accommodation and food services
+517,bus_regular,27,"5,212",Health care and social assistance
+415,bus_regular,3,"5,115",Public administration
+540,bus_regular,4,"5,029",Health care and social assistance
+643,bus_regular,13,"4,985",Health care and social assistance
+721,bus_high_freq,59,"4,982",Accommodation and food services
+729,bus_regular,45,"4,839",Accommodation and food services
+414,bus_regular,3,"4,836",Health care and social assistance
+678,bus_regular,15,"4,791",Health care and social assistance
+514,bus_regular,21,"4,767",Health care and social assistance
+116,bus_regular,55,"4,718",Retail trade
+703,bus_regular,57,"4,625",Public administration
+722,bus_high_freq,50,"4,613",Accommodation and food services
+724,bus_regular,90,"4,557",Public administration
+719,bus_high_freq,56,"4,377",Accommodation and food services
+611,bus_regular,39,"4,376",Retail trade
+642,bus_regular,2,"4,350",Health care and social assistance
+667,bus_regular,55,"4,265",Accommodation and food services
+121,bus_high_freq,55,"4,197",Retail trade
+930X,bus_regular,43,"4,153",Public administration
+651,bus_regular,7,"3,934",Retail trade
+620,bus_regular,67,"3,838",Retail trade
+524,bus_regular,23,"3,771",Other services (except public administration)
+622,bus_regular,13,"3,502",Health care and social assistance
+685,bus_regular,3,"3,460",Health care and social assistance
+662,bus_regular,4,"3,242",Retail trade
+926,bus_regular,67,"3,164",Accommodation and food services
+122,bus_regular,32,"3,091",Health care and social assistance
+645,bus_regular,12,"3,078",Retail trade
+617,bus_regular,22,"2,820",Health care and social assistance
+700X,bus_high_freq,4,"2,592",Accommodation and food services
+669,bus_regular,38,"2,519",Accommodation and food services
+628,bus_regular,53,"2,472",Retail trade
+713,bus_regular,24,"2,460",Accommodation and food services
+621,bus_regular,67,"2,421",Retail trade
+650,bus_regular,74,"2,156",Educational services
+644,bus_regular,44,"2,155",Retail trade
+658,bus_regular,48,"2,132",Accommodation and food services
+616,bus_regular,42,"2,100",Health care and social assistance
+589,bus_regular,2,"1,864",Health care and social assistance
+727,bus_regular,43,"1,814",Accommodation and food services
+659,bus_regular,36,"1,709",Accommodation and food services
+668,bus_regular,24,"1,657",Accommodation and food services
+919,bus_high_freq,31,"1,607",Retail trade
+663,bus_regular,22,"1,565",Accommodation and food services
+647,bus_regular,31,"1,562",Accommodation and food services
+1,bus_regular,79,"1,558",Accommodation and food services
+747,bus_regular,4,"1,522",Accommodation and food services
+922,bus_high_freq,33,"1,406",Retail trade
+A31,bus_regular,58,294,Retail trade
+A21,bus_regular,69,293,Retail trade
+A22,bus_regular,29,292,Retail trade
+A23,bus_regular,28,291,Retail trade
+443,bus_regular,59,230,Manufacturing
+451,bus_regular,48,230,Manufacturing
+420,bus_regular,20,229,Construction
+A12,bus_regular,22,220,Retail trade
+A13,bus_regular,23,218,Retail trade
+431,bus_regular,30,213,Manufacturing
+A32,bus_regular,64,206,Retail trade
+433A,bus_regular,58,203,Manufacturing
+442,bus_regular,26,203,Manufacturing
+440,bus_regular,34,203,Manufacturing
+430,bus_regular,34,202,Manufacturing
+A24,bus_regular,20,185,Retail trade
+A33,bus_regular,65,184,Retail trade
+A9,bus_regular,59,184,Retail trade
+441A,bus_regular,18,170,Manufacturing
+441,bus_regular,42,30,Real estate and rental and leasing
+450,bus_regular,20,0,
+433,bus_regular,32,0,
+432,bus_regular,23,0,
+A14,bus_regular,24,0,
+A3,bus_regular,15,0,
+A4,bus_regular,36,0,
+A6,bus_regular,52,0,
+A5,bus_regular,36,0,
+A8,bus_regular,34,0,
+A7,bus_regular,32,0,
+600,bus_regular,4,0,
+610,bus_regular,31,0,
+611,bus_regular,35,0,
+10,bus_regular,35,0,

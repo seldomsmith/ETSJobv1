@@ -1,4 +1,6 @@
 import Navbar from '@/components/Navbar'
+import Link from 'next/link'
+import AccessibilityChart from '@/components/AccessibilityChart'
 
 export default function Home() {
   return (
@@ -53,18 +55,18 @@ export default function Home() {
 
         {/* Main Content Area */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Map Placeholder/Area */}
+          {/* Map Area */}
           <div className="lg:col-span-2 glass-card p-8 aspect-video flex flex-col justify-center items-center group cursor-crosshair">
             <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <svg className="w-8 h-8 text-aurora-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold mb-2">Network Accessibility Heatmap</h3>
-            <p className="text-slate-500 text-sm mb-6 text-center max-w-sm">Requires Mapbox integration. This component will be fully initialized in the GitHub Codespace.</p>
-            <button className="px-6 py-2 rounded-lg bg-slate-800 border border-white/5 text-sm font-medium hover:border-aurora-cyan/50 transition-all">
-              Initialize Map Engine
-            </button>
+            <h3 className="text-xl font-bold mb-2">Network Accessibility Insights</h3>
+            <p className="text-slate-500 text-sm mb-6 text-center max-w-sm">Requires map loading setups. Enter our sequential scroll guide using configured dashboard variables.</p>
+            <Link href="/scrollytelling" className="px-6 py-2 rounded-lg bg-slate-800 border border-white/5 text-sm font-medium hover:border-aurora-cyan/50 hover:text-aurora-cyan transition-all">
+              Initialize Scrollytelling Mode
+            </Link>
           </div>
 
           {/* Side Panel: Insights */}
@@ -91,6 +93,13 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Accessibility Trends Chart */}
+            <div className="glass-card p-8">
+               <h3 className="text-lg font-bold mb-2">Accessibility Trends</h3>
+               <p className="text-xs text-slate-500 mb-6">Tracking relation of grid nodes to edge-suburb penalties.</p>
+               <AccessibilityChart />
             </div>
 
             <div className="glass-card p-8 bg-aurora-gradient">

@@ -27,6 +27,10 @@ The foundation of your interactive 3D dashboard is fully live and operational.
 
 - [ ] **Temporal Frequency Weighting (Peak vs Off-Peak)**
   * *Idea*: Contrast standard transit reach with Night-Shift (Midnight) accessibility limits if dataset files are compiled.
+- [x] **Animation full-run cycles (View 3)**
+  * *Action*: Trigger looping interval to allow all particle dots to fully complete journeys to City Hall curb safely.
+- [ ] **Multiple Time-Periods selectors (View 3)**
+  * *Idea*: Toggle Weekday Midday / Weekend routing paths and calculate real-time speed delay offsets.
 - [ ] **Fly-To Camera search intervals**
   * *Idea*: Type a DAUID to instantly pan coordinate frames smooth cinematic pitches over node centroids accurately.
 - [ ] **Layer Feature Checklists inside View 2**

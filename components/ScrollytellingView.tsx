@@ -138,7 +138,8 @@ export default function ScrollytellingView() {
     const routes = commuteRoutesData.features;
 
     const animate = () => {
-      progressRef.current = (progressRef.current + 0.003) % 1.0;
+      // Run up to 3.0 so that even dots with speed_factor=0.33 can reach 1.0 Distance before reset
+      progressRef.current = (progressRef.current + 0.003) % 3.0;
       const p = progressRef.current;
 
       // Walk a curved multi-point LineString at progress t (0→1)
@@ -154,7 +155,6 @@ export default function ScrollytellingView() {
           segLens.push(len);
           totalLen += len;
         }
-        // Walk to target distance
         const targetDist = t * totalLen;
         let walked = 0;
         for (let i = 0; i < segLens.length; i++) {
@@ -169,11 +169,14 @@ export default function ScrollytellingView() {
         return [coords[coords.length-1][0], coords[coords.length-1][1]];
       };
 
-      // Build particle point features for each route
       const points = routes.map((route: any) => {
         const coords: number[][] = route.geometry.coordinates;
+        // Car or Transit speed weights
+        const isCar = route.properties.mode === 'car';
         const speedFactor: number = route.properties.speed_factor ?? 1.0;
-        const t = route.properties.mode === 'car' ? p : Math.min(p * speedFactor, 0.98);
+        
+        // Let it stop at 1.0 (finish line) using Math.min
+        const t = Math.min(p * (isCar ? 1.0 : speedFactor), 1.0);
         const [lng, lat] = interpolateAlong(coords, t);
 
         return {

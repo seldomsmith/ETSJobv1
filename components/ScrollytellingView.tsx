@@ -13,11 +13,32 @@ const chapters = [
   { id: 'equity-divide', title: 'The Equity Divide', description: 'Combining social buffers reveals critical suburbs like Rutherford to belong to deficit quadrant limits.', layers: ['equity_map'], viewState: { longitude: -113.4038, latitude: 53.4661, zoom: 12.5, pitch: 60, bearing: -30 }, metrics: [{ label: 'Rutherford Equity', value: '1.0 Score', type: 'purple' }, { label: 'Job Access Link', value: '0.11 Ratio', type: 'lime' }] }
 ];
 
+const jobCategories = [
+  { name: 'Public administration', color: '#f59e0b' },
+  { name: 'Health care and social assistance', color: '#ec4899' },
+  { name: 'Accommodation and food services', color: '#f97316' },
+  { name: 'Educational services', color: '#8b5cf6' },
+  { name: 'Construction', color: '#eab308' },
+  { name: 'Professional, scientific and technical services', color: '#22d3ee' },
+  { name: 'Manufacturing', color: '#10b981' },
+  { name: 'Transportation and warehousing', color: '#06b6d4' },
+  { name: 'Finance and insurance', color: '#3b82f6' },
+  { name: 'Retail trade', color: '#ef4444' },
+  { name: 'Real estate and rental and leasing', color: '#f43f5e' },
+  { name: 'Administrative and support, waste management and remediation services', color: '#a855f7' },
+  { name: 'Utilities', color: '#34d399' },
+  { name: 'Agriculture, forestry, fishing and hunting', color: '#84cc16' },
+  { name: 'Information and cultural industries', color: '#6366f1' },
+  { name: 'Arts, entertainment and recreation', color: '#db2777' },
+  { name: 'Other services (except public administration)', color: '#475569' }
+];
+
 export default function ScrollytellingView() {
   const [currentChapter, setCurrentChapter] = useState(0);
   const [viewState, setViewState] = useState(chapters[0].viewState);
   const [jobCentersData, setJobCentersData] = useState<any>(null);
   const [hoverInfo, setHoverInfo] = useState<any>(null);
+  const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,6 +63,8 @@ export default function ScrollytellingView() {
             return f;
           }
         });
+        const uniqueCats = Array.from(new Set(data.features.map((f: any) => f.properties.job_category).filter(Boolean))) as string[];
+        setActiveCategories(uniqueCats);
         setJobCentersData({ ...data, features });
       }).catch(err => console.error(err));
   }, []);
@@ -96,29 +119,14 @@ export default function ScrollytellingView() {
                    'fill-extrusion-color': [
                      'match',
                      ['get', 'job_category'],
-                     'Public administration', '#f59e0b',
-                     'Health care and social assistance', '#ec4899',
-                     'Accommodation and food services', '#f97316',
-                     'Educational services', '#8b5cf6',
-                     'Construction', '#eab308',
-                     'Professional, scientific and technical services', '#22d3ee',
-                     'Manufacturing', '#10b981',
-                     'Transportation and warehousing', '#06b6d4',
-                     'Finance and insurance', '#3b82f6',
-                     'Retail trade', '#ef4444',
-                     'Real estate and rental and leasing', '#f43f5e',
-                     'Administrative and support, waste management and remediation services', '#a855f7',
-                     'Utilities', '#34d399',
-                     'Agriculture, forestry, fishing and hunting', '#84cc16',
-                     'Information and cultural industries', '#6366f1',
-                     'Arts, entertainment and recreation', '#db2777',
-                     'Other services (except public administration)', '#475569',
-                     '#98ff98' // Default Green
+                     ...jobCategories.flatMap(c => [c.name, c.color]),
+                     '#98ff98' // Default fallback
                    ], 
                    'fill-extrusion-height': ['interpolate', ['linear'], ['get', 'total_jobs'], 0, 0, 1000, 2500], 
                    'fill-extrusion-opacity': 0.85,
                    'fill-extrusion-base': 0
                 }} 
+                filter={['in', ['get', 'job_category'], ['literal', activeCategories]]}
               />
             </Source>
           )}
@@ -135,6 +143,33 @@ export default function ScrollytellingView() {
             <Layer id="equity-gradients" type="fill" layout={{ visibility: activeChap.layers.includes('equity_map') ? 'visible' : 'none' }} paint={{ 'fill-color': ['match', ['get', 'quadrant'], 'High Equity Need, Low Access', '#a855f7', 'Low Equity Need, High Access', '#98ff98', '#334155'], 'fill-opacity': 0.52 }} />
           </Source>
         </Map>
+
+        {/* Interactive Industry Checkbox Control */}
+        {activeChap.id === 'baseline' && (
+          <div className="absolute top-24 right-4 z-20 glass-card p-4 max-w-[240px] pointer-events-auto h-auto max-h-[400px] overflow-y-auto w-full">
+             <span className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-3 block">Filter Industries</span>
+             <div className="flex flex-col gap-2">
+                 {jobCategories.map((cat) => (
+                    <label key={cat.name} className="flex items-center gap-2 cursor-pointer group text-xxs">
+                       <input 
+                          type="checkbox" 
+                          checked={activeCategories.includes(cat.name)}
+                          onChange={(e) => {
+                             if (e.target.checked) {
+                                setActiveCategories(prev => [...prev, cat.name]);
+                             } else {
+                                setActiveCategories(prev => prev.filter(n => n !== cat.name));
+                             }
+                          }}
+                          className="rounded border-white/10 bg-slate-900/80 text-aurora-cyan focus:ring-0"
+                       />
+                       <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                       <span className="text-slate-400 group-hover:text-white transition-colors truncate">{cat.name}</span>
+                    </label>
+                 ))}
+             </div>
+          </div>
+        )}
 
         {/* Legend Overlay */}
         {activeChap.id === 'transit-penalty' && (

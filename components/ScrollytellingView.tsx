@@ -43,11 +43,14 @@ export default function ScrollytellingView() {
   const [jobCategoriesState] = useState(jobCategories);
   const [commuteRoutesData, setCommuteRoutesData] = useState<any>(null);
   const [particlePositions, setParticlePositions] = useState<any>(null);
+  const [penaltyGridData, setPenaltyGridData] = useState<any>(null);
+  const [showAggregate, setShowAggregate] = useState(false);
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
   const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(false);
   const [activePeriod, setActivePeriod] = useState<'weekday' | 'midday' | 'weekend'>('weekday');
   const animFrameRef = useRef<number | null>(null);
   const progressRef = useRef<number>(0);
+  const animCompletedRef = useRef<boolean>(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -114,6 +117,11 @@ export default function ScrollytellingView() {
       .then(data => setCommuteRoutesData(data))
       .catch(err => console.error(err));
 
+    fetch('/data/transit_penalty_grid.geojson')
+      .then(r => r.json())
+      .then(data => setPenaltyGridData(data))
+      .catch(err => console.error(err));
+
     fetch('/data/travel_times_weekday.parquet') // just to ensure fetch works, keeping same sequence
   }, []);
 
@@ -131,7 +139,9 @@ export default function ScrollytellingView() {
 
   // Reload commute routes when time period changes
   useEffect(() => {
-    progressRef.current = 0; // reset animation
+    progressRef.current = 0;
+    animCompletedRef.current = false;
+    setShowAggregate(false);
     fetch(`/data/commute_routes_${activePeriod}.geojson`)
       .then(r => r.json())
       .then(data => setCommuteRoutesData(data))
@@ -200,6 +210,14 @@ export default function ScrollytellingView() {
       });
 
       setParticlePositions({ type: 'FeatureCollection', features: points });
+
+      // Detect animation completion: progress > 2.9 means even slowest transit arrived
+      if (progressRef.current > 2.85 && !animCompletedRef.current) {
+        animCompletedRef.current = true;
+        // Short pause then reveal aggregate
+        setTimeout(() => setShowAggregate(true), 1200);
+      }
+
       animFrameRef.current = requestAnimationFrame(animate);
     };
 
@@ -287,7 +305,56 @@ export default function ScrollytellingView() {
             <Layer id="equity-gradients" type="fill" layout={{ visibility: activeChap.layers.includes('equity_map') ? 'visible' : 'none' }} paint={{ 'fill-color': ['match', ['get', 'quadrant'], 'High Equity Need, Low Access', '#a855f7', 'Low Equity Need, High Access', '#98ff98', '#334155'], 'fill-opacity': 0.52 }} />
           </Source>
 
-          {/* ⚡ Racing Pulse: Ghost Route Lines */}
+          {/* ───── AGGREGATE PENALTY GRID ─────────────────────────────────── */}
+          {penaltyGridData && activeChap.id === 'transit-penalty' && (
+            <Source id="penalty_grid" type="geojson" data={penaltyGridData}>
+              {/* Filled DA polygons — vivid bi-polar color scale */}
+              <Layer
+                id="penalty-grid-fill"
+                type="fill"
+                paint={{
+                  'fill-color': [
+                    'interpolate', ['linear'],
+                    ['coalesce',
+                      ['get', activePeriod === 'weekday' ? 'penalty_weekday' :
+                               activePeriod === 'midday'  ? 'penalty_midday'  : 'penalty_weekend'],
+                      0
+                    ],
+                    0.00, '#0f172a',   // dark slate — great transit
+                    0.15, '#1e3a5f',   // deep navy
+                    0.30, '#312e81',   // indigo
+                    0.50, '#7c3aed',   // vivid violet
+                    0.65, '#db2777',   // hot pink
+                    0.80, '#f97316',   // blazing orange
+                    1.00, '#fef08a',   // amber glow — transit desert
+                  ],
+                  'fill-opacity': showAggregate ? 0.78 : 0,
+                }}
+              />
+              {/* DA polygon outlines for definition */}
+              <Layer
+                id="penalty-grid-outline"
+                type="line"
+                paint={{
+                  'line-color': [
+                    'interpolate', ['linear'],
+                    ['coalesce',
+                      ['get', activePeriod === 'weekday' ? 'penalty_weekday' :
+                               activePeriod === 'midday'  ? 'penalty_midday'  : 'penalty_weekend'],
+                      0
+                    ],
+                    0, 'rgba(255,255,255,0.0)',
+                    0.4, 'rgba(124,58,237,0.3)',
+                    0.7, 'rgba(249,115,22,0.5)',
+                    1.0, 'rgba(254,240,138,0.7)',
+                  ],
+                  'line-width': 0.5,
+                  'line-opacity': showAggregate ? 1 : 0,
+                }}
+              />
+            </Source>
+          )}
+
           {commuteRoutesData && (
             <Source id="commute_ghost" type="geojson" data={commuteRoutesData}>
               <Layer
@@ -411,14 +478,32 @@ export default function ScrollytellingView() {
                 ))}
               </div>
             </div>
-            {/* Race key */}
+            {/* Race key + Skip button */}
             <div className="border-t border-white/10 pt-2">
+              {!showAggregate && (
+                <button
+                  onClick={() => { animCompletedRef.current = true; setShowAggregate(true); }}
+                  className="w-full mb-3 px-3 py-2 rounded-lg bg-aurora-cyan/10 border border-aurora-cyan/30 text-aurora-cyan text-xs font-bold hover:bg-aurora-cyan/20 transition-all duration-200 flex items-center justify-center gap-1.5"
+                >
+                  <span>⚡ Skip to Results</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" /><path fillRule="evenodd" d="M4.293 15.707a1 1 0 010-1.414L8.586 10 4.293 5.707a1 1 0 011.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                </button>
+              )}
+              {showAggregate && (
+                <button
+                  onClick={() => { animCompletedRef.current = false; progressRef.current = 0; setShowAggregate(false); }}
+                  className="w-full mb-3 px-3 py-2 rounded-lg bg-slate-700/40 border border-white/10 text-slate-400 text-xs font-bold hover:bg-white/5 transition-all duration-200 flex items-center justify-center gap-1.5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 4.293a1 1 0 010 1.414L5.414 10l4.293 4.293a1 1 0 01-1.414 1.414l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 0z" clipRule="evenodd" /><path fillRule="evenodd" d="M15.707 4.293a1 1 0 010 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  <span>↩ Replay Animation</span>
+                </button>
+              )}
               <span className="text-xxs font-bold text-slate-500 uppercase tracking-widest block mb-2">The Race</span>
-              <div className="flex items-center gap-2 mb-1">
+              <div className={`flex items-center gap-2 mb-1 transition-opacity duration-700 ${showAggregate ? 'opacity-30' : 'opacity-100'}`}>
                 <div className="w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0" />
                 <span className="text-xs text-slate-300">Car (full speed)</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className={`flex items-center gap-2 transition-opacity duration-700 ${showAggregate ? 'opacity-30' : 'opacity-100'}`}>
                 <div className="w-2.5 h-2.5 rounded-full bg-pink-400 flex-shrink-0" />
                 <span className="text-xs text-slate-300">Transit (penalized)</span>
               </div>
@@ -426,6 +511,31 @@ export default function ScrollytellingView() {
           </div>
         )}
 
+        {/* Aggregate View Legend — bottom left, fades in with choropleth */}
+        {activeChap.id === 'transit-penalty' && (
+          <div className={`absolute bottom-12 left-12 z-20 glass-card p-4 flex flex-col gap-2 min-w-[200px] transition-all duration-1000 ${showAggregate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+            <span className="text-xxs font-bold text-slate-500 uppercase tracking-widest block">Transit Penalty Citywide</span>
+            <div className="w-full h-3 rounded-full" style={{ background: 'linear-gradient(to right, #0f172a, #312e81, #7c3aed, #db2777, #f97316, #fef08a)' }} />
+            <div className="flex justify-between text-xxs text-slate-400 font-medium">
+              <span>🟢 Low Penalty</span>
+              <span>🔴 Transit Desert</span>
+            </div>
+            <div className="mt-1 pt-2 border-t border-white/10 flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: '#312e81' }} />
+                <span className="text-xxs text-slate-400">Moderate (30–50% slower)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: '#db2777' }} />
+                <span className="text-xxs text-slate-400">Severe (50–70% slower)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: '#f97316' }} />
+                <span className="text-xxs text-slate-400">Critical (70%+ slower)</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Floating Tooltip */}
         {hoverInfo && hoverInfo.feature && (

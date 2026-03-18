@@ -1,0 +1,36 @@
+{
+  "total_neighborhoods": 1762,
+  "critical_count": 362,
+  "critical_deficit_neighborhoods": [
+    {
+      "neighborhood": "RUTHERFORD",
+      "equity_score": 0.91,
+      "job_access_score": 0.03,
+      "quadrant": "High Equity, Low Access"
+    },
+    {
+      "neighborhood": "MAYLIEWAN",
+      "equity_score": 0.83,
+      "job_access_score": 0.01,
+      "quadrant": "High Equity, Low Access"
+    },
+    {
+      "neighborhood": "EAUX CLAIRES",
+      "equity_score": 0.81,
+      "job_access_score": 0.01,
+      "quadrant": "High Equity, Low Access"
+    },
+    {
+      "neighborhood": "BULYEA HEIGHTS",
+      "equity_score": 0.81,
+      "job_access_score": 0.01,
+      "quadrant": "High Equity, Low Access"
+    },
+    {
+      "neighborhood": "LAUREL",
+      "equity_score": 0.8,
+      "job_access_score": 0.02,
+      "quadrant": "High Equity, Low Access"
+    }
+  ]
+}

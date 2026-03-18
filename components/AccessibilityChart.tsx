@@ -36,47 +36,11 @@ export default function AccessibilityChart() {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
-          <XAxis 
-            dataKey="name" 
-            stroke="#64748b" 
-            fontSize={11} 
-            tickLine={false}
-          />
-          <YAxis 
-            stroke="#64748b" 
-            fontSize={11} 
-            tickLine={false} 
-            axisLine={false}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: '#0f172a', 
-              border: '1px solid rgba(255,255,255,0.05)', 
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: '#fff'
-            }} 
-            labelStyle={{ color: '#94a3b8', fontWeight: 'bold' }}
-          />
-          
-          <Area
-            type="monotone"
-            dataKey="accessibility"
-            name="Accessibility Index"
-            stroke="#22d3ee"
-            fillOpacity={1}
-            fill="url(#gradientCyan)"
-            strokeWidth={2}
-          />
-          <Area
-            type="monotone"
-            dataKey="penalty"
-            name="Transit Penalty"
-            stroke="#f472b6"
-            fillOpacity={1}
-            fill="url(#gradientPink)"
-            strokeWidth={2}
-          />
+          <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
+          <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+          <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', fontSize: '12px' }} />
+          <Area type="monotone" dataKey="accessibility" stroke="#22d3ee" fill="url(#gradientCyan)" strokeWidth={2} />
+          <Area type="monotone" dataKey="penalty" stroke="#f472b6" fill="url(#gradientPink)" strokeWidth={2} />
         </AreaChart>
       </ResponsiveContainer>
     </div>

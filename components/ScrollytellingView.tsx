@@ -45,6 +45,7 @@ export default function ScrollytellingView() {
   const [particlePositions, setParticlePositions] = useState<any>(null);
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
   const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(false);
+  const [activePeriod, setActivePeriod] = useState<'weekday' | 'midday' | 'weekend'>('weekday');
   const animFrameRef = useRef<number | null>(null);
   const progressRef = useRef<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -108,7 +109,7 @@ export default function ScrollytellingView() {
       .then(data => setHexData(data))
       .catch(err => console.error(err));
 
-    fetch('/data/commute_routes.geojson')
+    fetch('/data/commute_routes_weekday.geojson')
       .then(r => r.json())
       .then(data => setCommuteRoutesData(data))
       .catch(err => console.error(err));
@@ -127,6 +128,15 @@ export default function ScrollytellingView() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Reload commute routes when time period changes
+  useEffect(() => {
+    progressRef.current = 0; // reset animation
+    fetch(`/data/commute_routes_${activePeriod}.geojson`)
+      .then(r => r.json())
+      .then(data => setCommuteRoutesData(data))
+      .catch(err => console.error(err));
+  }, [activePeriod]);
 
   // Animation loop for commute race
   useEffect(() => {
@@ -375,20 +385,47 @@ export default function ScrollytellingView() {
           </>
         )}
 
-        {/* Race Legend */}
+        {/* Race Legend + Period Selector */}
         {activeChap.id === 'transit-penalty' && (
-          <div className="absolute bottom-12 right-12 z-20 glass-card p-4 flex flex-col gap-2">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">The Race</span>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-400" />
-              <span className="text-xs text-slate-300">Car (full speed)</span>
+          <div className="absolute bottom-12 right-12 z-20 glass-card p-4 flex flex-col gap-3 min-w-[180px] pointer-events-auto">
+            {/* Period selector pills */}
+            <div>
+              <span className="text-xxs font-bold text-slate-500 uppercase tracking-widest block mb-2">Time Period</span>
+              <div className="flex flex-col gap-1.5">
+                {([
+                  { key: 'weekday', label: '⏰ Weekday AM Peak' },
+                  { key: 'midday',  label: '☀️ Weekday Midday' },
+                  { key: 'weekend', label: '📅 Weekend' },
+                ] as const).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setActivePeriod(key)}
+                    className={`text-xs px-3 py-1.5 rounded-lg text-left transition-all duration-200 font-medium ${
+                      activePeriod === key
+                        ? 'bg-aurora-cyan/20 text-aurora-cyan border border-aurora-cyan/40'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-pink-400" />
-              <span className="text-xs text-slate-300">Transit (penalized)</span>
+            {/* Race key */}
+            <div className="border-t border-white/10 pt-2">
+              <span className="text-xxs font-bold text-slate-500 uppercase tracking-widest block mb-2">The Race</span>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0" />
+                <span className="text-xs text-slate-300">Car (full speed)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-pink-400 flex-shrink-0" />
+                <span className="text-xs text-slate-300">Transit (penalized)</span>
+              </div>
             </div>
           </div>
         )}
+
 
         {/* Floating Tooltip */}
         {hoverInfo && hoverInfo.feature && (

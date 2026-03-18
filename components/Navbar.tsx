@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Navbar() {
   return (
     <nav className="flex justify-between items-center py-6 px-8 border-b border-white/5 sticky top-0 bg-slate-950/80 backdrop-blur-md z-50">
@@ -12,8 +14,8 @@ export default function Navbar() {
       </div>
       
       <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
-        <a href="#" className="text-white hover:text-aurora-cyan transition-colors">Dashboard</a>
-        <a href="#" className="text-slate-400 hover:text-white transition-colors">Real-time Map</a>
+        <Link href="/" className="text-white hover:text-aurora-cyan transition-colors">Dashboard</Link>
+        <Link href="/scrollytelling" className="text-slate-400 hover:text-white transition-colors">Maps</Link>
         <a href="#" className="text-slate-400 hover:text-white transition-colors">Equity Index</a>
         <a href="#" className="text-slate-400 hover:text-white transition-colors">Reports</a>
       </div>

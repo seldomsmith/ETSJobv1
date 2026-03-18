@@ -93,7 +93,28 @@ export default function ScrollytellingView() {
                 type="fill-extrusion" 
                 layout={{ visibility: activeChap.layers.includes('job_centers') ? 'visible' : 'none' }} 
                 paint={{ 
-                   'fill-extrusion-color': '#98ff98', 
+                   'fill-extrusion-color': [
+                     'match',
+                     ['get', 'job_category'],
+                     'Public administration', '#f59e0b',
+                     'Health care and social assistance', '#ec4899',
+                     'Accommodation and food services', '#f97316',
+                     'Educational services', '#8b5cf6',
+                     'Construction', '#eab308',
+                     'Professional, scientific and technical services', '#22d3ee',
+                     'Manufacturing', '#10b981',
+                     'Transportation and warehousing', '#06b6d4',
+                     'Finance and insurance', '#3b82f6',
+                     'Retail trade', '#ef4444',
+                     'Real estate and rental and leasing', '#f43f5e',
+                     'Administrative and support, waste management and remediation services', '#a855f7',
+                     'Utilities', '#34d399',
+                     'Agriculture, forestry, fishing and hunting', '#84cc16',
+                     'Information and cultural industries', '#6366f1',
+                     'Arts, entertainment and recreation', '#db2777',
+                     'Other services (except public administration)', '#475569',
+                     '#98ff98' // Default Green
+                   ], 
                    'fill-extrusion-height': ['interpolate', ['linear'], ['get', 'total_jobs'], 0, 0, 1000, 2500], 
                    'fill-extrusion-opacity': 0.85,
                    'fill-extrusion-base': 0
@@ -153,10 +174,10 @@ export default function ScrollytellingView() {
         )}
 
       </div>
-      <div className="absolute top-0 w-full z-10 flex flex-col items-center">
+      <div className="absolute top-0 w-full z-10 flex flex-col items-center pointer-events-none">
          {chapters.map((chap, i) => (
             <div key={chap.id} className="h-screen flex items-center justify-start p-12 max-w-xl w-full mr-auto">
-               <motion.div className={`glass-card p-8 backdrop-blur-md border-l-4 transition-all duration-700 ${i === currentChapter ? 'border-aurora-cyan opacity-100 shadow-xl' : 'border-slate-800 opacity-20'}`} initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ amount: 0.6 }}>
+               <motion.div className={`glass-card p-8 backdrop-blur-md border-l-4 transition-all duration-700 pointer-events-auto ${i === currentChapter ? 'border-aurora-cyan opacity-100 shadow-xl' : 'border-slate-800 opacity-20'}`} initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ amount: 0.6 }}>
                  <span className="text-xs font-bold text-aurora-cyan uppercase tracking-widest block font-outfit">View {i + 1}</span>
                  <h2 className="text-3xl font-extrabold mb-3">{chap.title}</h2>
                  <p className="text-slate-400 text-sm mb-6">{chap.description}</p>

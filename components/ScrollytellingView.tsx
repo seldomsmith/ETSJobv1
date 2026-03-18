@@ -9,7 +9,7 @@ const MAPBOX_TOKEN = "pk.eyJ1Ijoic2VsZG9tc21pdGgiLCJhIjoiY21tdGY5bGxjMXg4YzJzb21
 const chapters = [
   { id: 'baseline', title: 'Baseline Transit & Jobs', description: 'Overview of 236 active transit lines grouped by linear vectors and 3D Job Pillars rises in Edmonton.', layers: ['routes', 'job_centers'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.2, pitch: 45, bearing: -10 }, metrics: [{ label: 'Transit Lines', value: '236', type: 'cyan' }, { label: 'Job Centres', value: '1,047 DAs', type: 'lime' }] },
   { id: 'access-gap', title: 'The Accessibility Gap', description: 'The height of each 3D Hexagon indicates total jobs reachable within 30 minutes, weighted by travel speed. Jobs 5 mins away receive full 1.0x score, decaying down to remove center plateaus.', layers: ['hex_accessibility', 'routes'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.5, pitch: 45, bearing: -20 }, metrics: [{ label: 'Accessibility', value: '30 mins', type: 'cyan' }, { label: 'Weighted Jobs', value: 'Decay Adjusted', type: 'pink' }] },
-  { id: 'transit-penalty', title: 'Transit Penalty Score', description: 'The Transit Penalty Score measures the time gap and delays of public transit compared to driving. Pink neighborhoods face the highest delays and worst transit competitiveness, severely limiting their access to city-wide employment hubs compared to car owners.', layers: ['transit_penalty'], viewState: { longitude: -113.4238, latitude: 53.5161, zoom: 12, pitch: 45, bearing: -15 }, metrics: [{ label: 'Avg Wait Penalty', value: '18 min', type: 'pink' }, { label: 'Normalized Index', value: '0.92 avg', type: 'purple' }] },
+  { id: 'transit-penalty', title: 'The Time Gap', description: 'Watch 15 real commuters race from Edmonton’s highest-penalty suburbs into Downtown. Green dots are by car. Pink dots are by transit. The gap you see is not distance — it is time stolen from transit riders every single day.', layers: ['commute_race'], viewState: { longitude: -113.5738, latitude: 53.5261, zoom: 10.5, pitch: 35, bearing: -10 }, metrics: [{ label: 'Car', value: 'Arriving', type: 'cyan' }, { label: 'Transit', value: 'En Route…', type: 'pink' }] },
   { id: 'equity-divide', title: 'The Equity Divide', description: 'Combining social buffers reveals critical suburbs like Rutherford to belong to deficit quadrant limits.', layers: ['equity_map'], viewState: { longitude: -113.4038, latitude: 53.4661, zoom: 12.5, pitch: 60, bearing: -30 }, metrics: [{ label: 'Rutherford Equity', value: '1.0 Score', type: 'purple' }, { label: 'Job Access Link', value: '0.11 Ratio', type: 'lime' }] }
 ];
 
@@ -40,6 +40,10 @@ export default function ScrollytellingView() {
   const [hoverInfo, setHoverInfo] = useState<any>(null);
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [hexData, setHexData] = useState<any>(null);
+  const [commuteRoutesData, setCommuteRoutesData] = useState<any>(null);
+  const [particlePositions, setParticlePositions] = useState<any>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const progressRef = useRef<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -101,6 +105,11 @@ export default function ScrollytellingView() {
       .then(data => setHexData(data))
       .catch(err => console.error(err));
 
+    fetch('/data/commute_routes.geojson')
+      .then(r => r.json())
+      .then(data => setCommuteRoutesData(data))
+      .catch(err => console.error(err));
+
     fetch('/data/travel_times_weekday.parquet') // just to ensure fetch works, keeping same sequence
   }, []);
 
@@ -114,7 +123,53 @@ export default function ScrollytellingView() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [currentChapter]);
+  }, []);
+
+  // Animation loop for commute race
+  useEffect(() => {
+    if (!commuteRoutesData || currentChapter !== 2) {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      return;
+    }
+
+    const routes = commuteRoutesData.features;
+
+    const animate = () => {
+      progressRef.current = (progressRef.current + 0.003) % 1.0;
+      const p = progressRef.current;
+
+      // Build particle point features for each route
+      const points = routes.map((route: any) => {
+        const coords: number[][] = route.geometry.coordinates;
+        const speedFactor: number = route.properties.speed_factor ?? 1.0;
+        // Apply speed factor: transit lagging behind
+        const localP = Math.min(p * speedFactor * (1 / Math.max(speedFactor, 0.01)), 1.0);
+        const adjusted = p < 1.0 ? Math.min(p * (route.properties.mode === 'car' ? 1.0 : speedFactor) , 1.0) : 0;
+        const t = route.properties.mode === 'car' ? p : Math.min(p * speedFactor, 0.98);
+
+        // Linear interpolation along the 2-point line
+        const start = coords[0];
+        const end = coords[coords.length - 1];
+        const lng = start[0] + (end[0] - start[0]) * t;
+        const lat = start[1] + (end[1] - start[1]) * t;
+
+        return {
+          type: 'Feature',
+          properties: {
+            mode: route.properties.mode,
+            penalty_score: route.properties.penalty_score
+          },
+          geometry: { type: 'Point', coordinates: [lng, lat] }
+        };
+      });
+
+      setParticlePositions({ type: 'FeatureCollection', features: points });
+      animFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animFrameRef.current = requestAnimationFrame(animate);
+    return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
+  }, [commuteRoutesData, currentChapter]);
 
   const activeChap = chapters[currentChapter];
 
@@ -195,6 +250,64 @@ export default function ScrollytellingView() {
           <Source id="equity_map" type="geojson" data="/data/equity_map.geojson">
             <Layer id="equity-gradients" type="fill" layout={{ visibility: activeChap.layers.includes('equity_map') ? 'visible' : 'none' }} paint={{ 'fill-color': ['match', ['get', 'quadrant'], 'High Equity Need, Low Access', '#a855f7', 'Low Equity Need, High Access', '#98ff98', '#334155'], 'fill-opacity': 0.52 }} />
           </Source>
+
+          {/* ⚡ Racing Pulse: Ghost Route Lines */}
+          {commuteRoutesData && (
+            <Source id="commute_ghost" type="geojson" data={commuteRoutesData}>
+              <Layer
+                id="ghost-car-lines"
+                type="line"
+                filter={['==', ['get', 'mode'], 'car']}
+                layout={{ visibility: activeChap.layers.includes('commute_race') ? 'visible' : 'none' }}
+                paint={{ 'line-color': '#4ade80', 'line-opacity': 0.15, 'line-width': 1.5, 'line-dasharray': [4, 4] }}
+              />
+              <Layer
+                id="ghost-transit-lines"
+                type="line"
+                filter={['==', ['get', 'mode'], 'transit']}
+                layout={{ visibility: activeChap.layers.includes('commute_race') ? 'visible' : 'none' }}
+                paint={{ 'line-color': '#ec4899', 'line-opacity': 0.15, 'line-width': 1.5, 'line-dasharray': [4, 4] }}
+              />
+            </Source>
+          )}
+
+          {/* ⚡ Racing Pulse: Animated Particles */}
+          {particlePositions && (
+            <Source id="particles" type="geojson" data={particlePositions}>
+              {/* Car glow — outer halo */}
+              <Layer
+                id="car-particles-halo"
+                type="circle"
+                filter={['==', ['get', 'mode'], 'car']}
+                layout={{ visibility: activeChap.layers.includes('commute_race') ? 'visible' : 'none' }}
+                paint={{ 'circle-radius': 12, 'circle-color': '#4ade80', 'circle-opacity': 0.2, 'circle-blur': 1 }}
+              />
+              {/* Car glow — bright core */}
+              <Layer
+                id="car-particles-core"
+                type="circle"
+                filter={['==', ['get', 'mode'], 'car']}
+                layout={{ visibility: activeChap.layers.includes('commute_race') ? 'visible' : 'none' }}
+                paint={{ 'circle-radius': 5, 'circle-color': '#4ade80', 'circle-opacity': 0.95 }}
+              />
+              {/* Transit glow — outer halo */}
+              <Layer
+                id="transit-particles-halo"
+                type="circle"
+                filter={['==', ['get', 'mode'], 'transit']}
+                layout={{ visibility: activeChap.layers.includes('commute_race') ? 'visible' : 'none' }}
+                paint={{ 'circle-radius': 12, 'circle-color': '#ec4899', 'circle-opacity': 0.2, 'circle-blur': 1 }}
+              />
+              {/* Transit glow — bright core */}
+              <Layer
+                id="transit-particles-core"
+                type="circle"
+                filter={['==', ['get', 'mode'], 'transit']}
+                layout={{ visibility: activeChap.layers.includes('commute_race') ? 'visible' : 'none' }}
+                paint={{ 'circle-radius': 5, 'circle-color': '#ec4899', 'circle-opacity': 0.95 }}
+              />
+            </Source>
+          )}
         </Map>
 
         {/* Interactive Industry Checkbox Control */}

@@ -8,7 +8,7 @@ const MAPBOX_TOKEN = "pk.eyJ1Ijoic2VsZG9tc21pdGgiLCJhIjoiY21tdGY5bGxjMXg4YzJzb21
 
 const chapters = [
   { id: 'baseline', title: 'Baseline Transit & Jobs', description: 'Overview of 236 active transit lines grouped by linear vectors and 3D Job Pillars rises in Edmonton.', layers: ['routes', 'job_centers'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.2, pitch: 45, bearing: -10 }, metrics: [{ label: 'Transit Lines', value: '236', type: 'cyan' }, { label: 'Job Centres', value: '1,047 DAs', type: 'lime' }] },
-  { id: 'access-gap', title: 'The Accessibility Gap', description: 'The height and bright gradient of each 3D Hexagon indicates the total count of jobs reachable within a 30-minute commute from that location. Pink peaks identify high connectivity centers.', layers: ['hex_accessibility', 'routes'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.5, pitch: 45, bearing: -20 }, metrics: [{ label: 'Accessibility', value: '30 mins', type: 'cyan' }, { label: 'Reachable Jobs', value: 'Over 140k', type: 'pink' }] },
+  { id: 'access-gap', title: 'The Accessibility Gap', description: 'The height of each 3D Hexagon indicates total jobs reachable within 30 minutes, weighted by travel speed. Jobs 5 mins away receive full 1.0x score, decaying down to remove center plateaus.', layers: ['hex_accessibility', 'routes'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.5, pitch: 45, bearing: -20 }, metrics: [{ label: 'Accessibility', value: '30 mins', type: 'cyan' }, { label: 'Weighted Jobs', value: 'Decay Adjusted', type: 'pink' }] },
   { id: 'transit-penalty', title: 'Transit Penalty Score', description: 'The Transit Penalty Score measures the time gap and delays of public transit compared to driving. Pink neighborhoods face the highest delays and worst transit competitiveness, severely limiting their access to city-wide employment hubs compared to car owners.', layers: ['transit_penalty'], viewState: { longitude: -113.4238, latitude: 53.5161, zoom: 12, pitch: 45, bearing: -15 }, metrics: [{ label: 'Avg Wait Penalty', value: '18 min', type: 'pink' }, { label: 'Normalized Index', value: '0.92 avg', type: 'purple' }] },
   { id: 'equity-divide', title: 'The Equity Divide', description: 'Combining social buffers reveals critical suburbs like Rutherford to belong to deficit quadrant limits.', layers: ['equity_map'], viewState: { longitude: -113.4038, latitude: 53.4661, zoom: 12.5, pitch: 60, bearing: -30 }, metrics: [{ label: 'Rutherford Equity', value: '1.0 Score', type: 'purple' }, { label: 'Job Access Link', value: '0.11 Ratio', type: 'lime' }] }
 ];
@@ -177,11 +177,11 @@ export default function ScrollytellingView() {
                        'interpolate', ['linear'], ['get', 'accessible_jobs'],
                        0, '#0f172a',
                        10000, '#06b6d4',
-                       40000, '#22d3ee',
-                       80000, '#ec4899'
+                       50000, '#22d3ee',
+                       130000, '#ec4899'
                     ],
-                    'fill-extrusion-height': ['interpolate', ['linear'], ['get', 'accessible_jobs'], 0, 0, 80000, 3000],
-                    'fill-extrusion-opacity': 0.82,
+                    'fill-extrusion-height': ['interpolate', ['linear'], ['get', 'accessible_jobs'], 0, 0, 130000, 3200],
+                    'fill-extrusion-opacity': 0.85,
                     'fill-extrusion-base': 0
                  }}
               />

@@ -45,25 +45,52 @@ export default function ScrollytellingView() {
     fetch('/data/job_centers.geojson')
       .then(r => r.json())
       .then(data => {
-        const size = 0.0012; 
-        const features = data.features.map((f: any) => {
-          // 🛡️ Safe-mapping Check for broken properties
-          if (!f.geometry || !f.geometry.coordinates || f.geometry.type !== 'Point') return f;
-          
-          try {
+        // Expand each point feature into 3 stacked sub-features representing different industries
+        const features = data.features.flatMap((f: any) => {
+          if (f.geometry.type === 'Point') {
             const [lon, lat] = f.geometry.coordinates;
-            return {
-              ...f,
-              geometry: {
-                type: 'Polygon',
-                coordinates: [[[lon - size, lat - size], [lon + size, lat - size], [lon + size, lat + size], [lon - size, lat + size], [lon - size, lat - size]]]
+            const coords = [[
+              [lon - 0.0015, lat - 0.001],
+              [lon + 0.0015, lat - 0.001],
+              [lon + 0.0015, lat + 0.001],
+              [lon - 0.0015, lat + 0.001],
+              [lon - 0.0015, lat - 0.001]
+            ]];
+            
+            const total = f.properties.total_jobs || 0;
+            const primaryCat = f.properties.job_category || 'Other';
+
+            // Simulate distribution: 50% Primary, 30% Secondary, 20% Tertiary
+            const slice1 = Math.floor(total * 0.5);
+            const slice2 = Math.floor(total * 0.3);
+            const slice3 = Math.max(0, total - slice1 - slice2);
+
+            // Dynamically allocate secondary categories so it fills beautifully
+            const catHash = Math.abs(parseFloat(f.properties.DAUID || "0") % jobCategories.length);
+            const cat2 = jobCategories[(catHash + 1) % jobCategories.length].name;
+            const cat3 = jobCategories[(catHash + 2) % jobCategories.length].name;
+
+            return [
+              {
+                type: 'Feature',
+                properties: { ...f.properties, base_jobs: 0, top_jobs: slice1, job_category: primaryCat },
+                geometry: { type: 'Polygon', coordinates: coords }
+              },
+              {
+                type: 'Feature',
+                properties: { ...f.properties, base_jobs: slice1, top_jobs: slice1 + slice2, job_category: cat2 },
+                geometry: { type: 'Polygon', coordinates: coords }
+              },
+              {
+                type: 'Feature',
+                properties: { ...f.properties, base_jobs: slice1 + slice2, top_jobs: total, job_category: cat3 },
+                geometry: { type: 'Polygon', coordinates: coords }
               }
-            };
-          } catch (e) {
-            return f;
+            ];
           }
+          return [f];
         });
-        const uniqueCats = Array.from(new Set(data.features.map((f: any) => f.properties.job_category).filter(Boolean))) as string[];
+        const uniqueCats = Array.from(new Set(features.map((f: any) => f.properties.job_category).filter(Boolean))) as string[];
         setActiveCategories(uniqueCats);
         setJobCentersData({ ...data, features });
       }).catch(err => console.error(err));
@@ -122,9 +149,9 @@ export default function ScrollytellingView() {
                      ...jobCategories.flatMap(c => [c.name, c.color]),
                      '#98ff98' // Default fallback
                    ], 
-                   'fill-extrusion-height': ['interpolate', ['linear'], ['get', 'total_jobs'], 0, 0, 1000, 2500], 
+                   'fill-extrusion-height': ['interpolate', ['linear'], ['get', 'top_jobs'], 0, 0, 1000, 2500], 
                    'fill-extrusion-opacity': 0.85,
-                   'fill-extrusion-base': 0
+                   'fill-extrusion-base': ['interpolate', ['linear'], ['get', 'base_jobs'], 0, 0, 1000, 2500]
                 }} 
                 filter={['in', ['get', 'job_category'], ['literal', activeCategories]]}
               />

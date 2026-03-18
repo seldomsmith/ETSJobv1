@@ -141,20 +141,40 @@ export default function ScrollytellingView() {
       progressRef.current = (progressRef.current + 0.003) % 1.0;
       const p = progressRef.current;
 
+      // Walk a curved multi-point LineString at progress t (0→1)
+      const interpolateAlong = (coords: number[][], t: number): [number, number] => {
+        if (coords.length === 1) return [coords[0][0], coords[0][1]];
+        // Calculate total length
+        let totalLen = 0;
+        const segLens: number[] = [];
+        for (let i = 0; i < coords.length - 1; i++) {
+          const dx = coords[i+1][0] - coords[i][0];
+          const dy = coords[i+1][1] - coords[i][1];
+          const len = Math.sqrt(dx*dx + dy*dy);
+          segLens.push(len);
+          totalLen += len;
+        }
+        // Walk to target distance
+        const targetDist = t * totalLen;
+        let walked = 0;
+        for (let i = 0; i < segLens.length; i++) {
+          if (walked + segLens[i] >= targetDist) {
+            const segT = (targetDist - walked) / segLens[i];
+            const lng = coords[i][0] + (coords[i+1][0] - coords[i][0]) * segT;
+            const lat = coords[i][1] + (coords[i+1][1] - coords[i][1]) * segT;
+            return [lng, lat];
+          }
+          walked += segLens[i];
+        }
+        return [coords[coords.length-1][0], coords[coords.length-1][1]];
+      };
+
       // Build particle point features for each route
       const points = routes.map((route: any) => {
         const coords: number[][] = route.geometry.coordinates;
         const speedFactor: number = route.properties.speed_factor ?? 1.0;
-        // Apply speed factor: transit lagging behind
-        const localP = Math.min(p * speedFactor * (1 / Math.max(speedFactor, 0.01)), 1.0);
-        const adjusted = p < 1.0 ? Math.min(p * (route.properties.mode === 'car' ? 1.0 : speedFactor) , 1.0) : 0;
         const t = route.properties.mode === 'car' ? p : Math.min(p * speedFactor, 0.98);
-
-        // Linear interpolation along the 2-point line
-        const start = coords[0];
-        const end = coords[coords.length - 1];
-        const lng = start[0] + (end[0] - start[0]) * t;
-        const lat = start[1] + (end[1] - start[1]) * t;
+        const [lng, lat] = interpolateAlong(coords, t);
 
         return {
           type: 'Feature',
@@ -352,15 +372,18 @@ export default function ScrollytellingView() {
           </>
         )}
 
-        {/* Legend Overlay */}
+        {/* Race Legend */}
         {activeChap.id === 'transit-penalty' && (
-          <div className="absolute bottom-12 right-12 z-20 glass-card p-4 flex flex-col items-center">
-             <span className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-2 block font-outfit">Penalty Score</span>
-             <div className="w-48 h-3 rounded-full bg-gradient-to-r from-aurora-cyan via-purple-500 to-aurora-pink mb-2"></div>
-             <div className="w-full flex justify-between text-xxs font-bold text-slate-400">
-               <span>Good (Transit ~ Car)</span>
-               <span>Poor (Car Faster)</span>
-             </div>
+          <div className="absolute bottom-12 right-12 z-20 glass-card p-4 flex flex-col gap-2">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">The Race</span>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-400" />
+              <span className="text-xs text-slate-300">Car (full speed)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-pink-400" />
+              <span className="text-xs text-slate-300">Transit (penalized)</span>
+            </div>
           </div>
         )}
 

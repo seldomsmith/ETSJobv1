@@ -8,7 +8,7 @@ const MAPBOX_TOKEN = "pk.eyJ1Ijoic2VsZG9tc21pdGgiLCJhIjoiY21tdGY5bGxjMXg4YzJzb21
 
 const chapters = [
   { id: 'baseline', title: 'Baseline Transit & Jobs', description: 'Overview of 236 active transit lines grouped by linear vectors and 3D Job Pillars rises in Edmonton.', layers: ['routes', 'job_centers'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.2, pitch: 45, bearing: -10 }, metrics: [{ label: 'Transit Lines', value: '236', type: 'cyan' }, { label: 'Job Centres', value: '1,047 DAs', type: 'lime' }] },
-  { id: 'access-gap', title: 'The Accessibility Gap', description: 'Contrasting bounded isochrones measuring reachability of neighborhoods under 30 minute thresholds.', layers: ['isochrones', 'routes'], viewState: { longitude: -113.4538, latitude: 53.5361, zoom: 11.5, pitch: 20 }, metrics: [{ label: 'Deficit Zones', value: '324 Areas', type: 'pink' }, { label: 'Max Reachable', value: '142k Jobs', type: 'cyan' }] },
+  { id: 'access-gap', title: 'The Accessibility Gap', description: 'Hexbin grids measuring origin-based reachability to city job nodes within 30-minute travel limits.', layers: ['hex_accessibility', 'routes'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.5, pitch: 45, bearing: -20 }, metrics: [{ label: 'Accessibility', value: '30 mins', type: 'cyan' }, { label: 'Reachable Jobs', value: 'Over 140k', type: 'pink' }] },
   { id: 'transit-penalty', title: 'Transit Penalty Score', description: 'The Transit Penalty Score measures the time gap and delays of public transit compared to driving. Pink neighborhoods face the highest delays and worst transit competitiveness, severely limiting their access to city-wide employment hubs compared to car owners.', layers: ['transit_penalty'], viewState: { longitude: -113.4238, latitude: 53.5161, zoom: 12, pitch: 45, bearing: -15 }, metrics: [{ label: 'Avg Wait Penalty', value: '18 min', type: 'pink' }, { label: 'Normalized Index', value: '0.92 avg', type: 'purple' }] },
   { id: 'equity-divide', title: 'The Equity Divide', description: 'Combining social buffers reveals critical suburbs like Rutherford to belong to deficit quadrant limits.', layers: ['equity_map'], viewState: { longitude: -113.4038, latitude: 53.4661, zoom: 12.5, pitch: 60, bearing: -30 }, metrics: [{ label: 'Rutherford Equity', value: '1.0 Score', type: 'purple' }, { label: 'Job Access Link', value: '0.11 Ratio', type: 'lime' }] }
 ];
@@ -39,6 +39,7 @@ export default function ScrollytellingView() {
   const [jobCentersData, setJobCentersData] = useState<any>(null);
   const [hoverInfo, setHoverInfo] = useState<any>(null);
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
+  const [hexData, setHexData] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -94,6 +95,13 @@ export default function ScrollytellingView() {
         setActiveCategories(uniqueCats);
         setJobCentersData({ ...data, features });
       }).catch(err => console.error(err));
+
+    fetch('/data/hex_accessibility.geojson')
+      .then(r => r.json())
+      .then(data => setHexData(data))
+      .catch(err => console.error(err));
+
+    fetch('/data/travel_times_weekday.parquet') // just to ensure fetch works, keeping same sequence
   }, []);
 
   useEffect(() => {
@@ -158,9 +166,27 @@ export default function ScrollytellingView() {
             </Source>
           )}
 
-          <Source id="isochrones" type="geojson" data="/data/isochrones.geojson">
-            <Layer id="isochrones-layer" type="fill" layout={{ visibility: activeChap.layers.includes('isochrones') ? 'visible' : 'none' }} paint={{ 'fill-color': '#22d3ee', 'fill-opacity': 0.35, 'fill-outline-color': '#22d3ee' }} />
-          </Source>
+          {hexData && (
+            <Source id="hex_accessibility" type="geojson" data={hexData}>
+              <Layer 
+                 id="hex-accessibility" 
+                 type="fill-extrusion" 
+                 layout={{ visibility: activeChap.layers.includes('hex_accessibility') ? 'visible' : 'none' }} 
+                 paint={{
+                    'fill-extrusion-color': [
+                       'interpolate', ['linear'], ['get', 'accessible_jobs'],
+                       0, '#0f172a',
+                       10000, '#06b6d4',
+                       40000, '#22d3ee',
+                       80000, '#ec4899'
+                    ],
+                    'fill-extrusion-height': ['interpolate', ['linear'], ['get', 'accessible_jobs'], 0, 0, 80000, 3000],
+                    'fill-extrusion-opacity': 0.82,
+                    'fill-extrusion-base': 0
+                 }}
+              />
+            </Source>
+          )}
 
           <Source id="transit_penalty" type="geojson" data="/data/transit_penalty.geojson">
             <Layer id="penalty-choropleth" type="fill" layout={{ visibility: activeChap.layers.includes('transit_penalty') ? 'visible' : 'none' }} paint={{ 'fill-color': ['interpolate', ['linear'], ['get', 'penalty_score'], 0, '#22d3ee', 0.5, '#a855f7', 1, '#f472b6'], 'fill-opacity': 0.7 }} />

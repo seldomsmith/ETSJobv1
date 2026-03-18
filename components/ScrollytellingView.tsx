@@ -40,8 +40,11 @@ export default function ScrollytellingView() {
   const [hoverInfo, setHoverInfo] = useState<any>(null);
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [hexData, setHexData] = useState<any>(null);
+  const [jobCategoriesState] = useState(jobCategories);
   const [commuteRoutesData, setCommuteRoutesData] = useState<any>(null);
   const [particlePositions, setParticlePositions] = useState<any>(null);
+  const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
+  const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(false);
   const animFrameRef = useRef<number | null>(null);
   const progressRef = useRef<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -312,29 +315,41 @@ export default function ScrollytellingView() {
 
         {/* Interactive Industry Checkbox Control */}
         {activeChap.id === 'baseline' && (
-          <div className="absolute top-24 right-4 z-20 glass-card p-4 max-w-[240px] pointer-events-auto h-auto max-h-[400px] overflow-y-auto w-full">
-             <span className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-3 block">Filter Industries</span>
-             <div className="flex flex-col gap-2">
-                 {jobCategories.map((cat) => (
-                    <label key={cat.name} className="flex items-center gap-2 cursor-pointer group text-xxs">
-                       <input 
-                          type="checkbox" 
-                          checked={activeCategories.includes(cat.name)}
-                          onChange={(e) => {
-                             if (e.target.checked) {
-                                setActiveCategories(prev => [...prev, cat.name]);
-                             } else {
-                                setActiveCategories(prev => prev.filter(n => n !== cat.name));
-                             }
-                          }}
-                          className="rounded border-white/10 bg-slate-900/80 text-aurora-cyan focus:ring-0"
-                       />
-                       <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                       <span className="text-slate-400 group-hover:text-white transition-colors truncate">{cat.name}</span>
-                    </label>
-                 ))}
-             </div>
-          </div>
+          <>
+            <div className={`absolute top-24 right-4 z-20 glass-card p-4 max-w-[240px] pointer-events-auto h-auto max-h-[400px] overflow-y-auto w-full transition-all duration-500 transform ${isFiltersCollapsed ? 'translate-x-[120%] opacity-0' : 'translate-x-0'}`}>
+               <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-widest block font-outfit">Filter Industries</span>
+                  <button onClick={() => setIsFiltersCollapsed(true)} className="text-slate-500 hover:text-white transition-colors bg-white/5 p-1 rounded">
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+                  </button>
+               </div>
+               <div className="flex flex-col gap-2">
+                   {jobCategories.map((cat) => (
+                      <label key={cat.name} className="flex items-center gap-2 cursor-pointer group text-xxs">
+                         <input 
+                            type="checkbox" 
+                            checked={activeCategories.includes(cat.name)}
+                            onChange={(e) => {
+                               if (e.target.checked) {
+                                  setActiveCategories(prev => [...prev, cat.name]);
+                               } else {
+                                  setActiveCategories(prev => prev.filter(n => n !== cat.name));
+                               }
+                            }}
+                            className="rounded border-white/10 bg-slate-900/80 text-aurora-cyan focus:ring-0"
+                         />
+                         <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                         <span className="text-slate-400 group-hover:text-white transition-colors truncate">{cat.name}</span>
+                      </label>
+                   ))}
+               </div>
+            </div>
+            {isFiltersCollapsed && (
+               <button onClick={() => setIsFiltersCollapsed(false)} className="absolute top-24 right-4 z-20 p-2 glass-card rounded h-8 w-8 flex items-center justify-center pointer-events-auto text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7M19 19l-7-7 7-7" /></svg>
+               </button>
+            )}
+          </>
         )}
 
         {/* Legend Overlay */}
@@ -371,11 +386,21 @@ export default function ScrollytellingView() {
                     </span>
                  </div>
               </div>
-          </div>
+            </div>
         )}
 
       </div>
-      <div className="absolute top-0 w-full z-10 flex flex-col items-center pointer-events-none">
+
+      {/* Narrative Toggle Button */}
+      <button onClick={() => setIsNarrativeCollapsed(!isNarrativeCollapsed)} className="absolute top-24 left-4 z-30 p-2 glass-card rounded h-8 w-8 flex items-center justify-center pointer-events-auto text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-300">
+         {isNarrativeCollapsed ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+         ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7M19 19l-7-7 7-7" /></svg>
+         )}
+      </button>
+
+      <div className={`absolute top-0 w-full z-10 flex flex-col items-center pointer-events-none transition-all duration-500 transform ${isNarrativeCollapsed ? '-translate-x-[110%] opacity-0' : 'translate-x-0 opacity-100'}`}>
          {chapters.map((chap, i) => (
             <div key={chap.id} className="h-screen flex items-center justify-start p-12 max-w-xl w-full mr-auto">
                <motion.div className={`glass-card p-8 backdrop-blur-md border-l-4 transition-all duration-700 pointer-events-auto ${i === currentChapter ? 'border-aurora-cyan opacity-100 shadow-xl' : 'border-slate-800 opacity-20'}`} initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ amount: 0.6 }}>

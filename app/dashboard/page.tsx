@@ -30,6 +30,7 @@ interface LeadFeature {
 }
 
 const sizeValues: Record<string, number> = {
+  "5-9": 0,
   "10-19": 1,
   "20-99": 2,
   "100-499": 3,
@@ -129,10 +130,12 @@ export default function LeadDashboard() {
 
       // Workforce size
       if (minSize !== 'all') {
-        if (minSize === '20+') {
-          if (p.size === '10-19') return false;
+        if (minSize === '10+') {
+          if (p.size === '5-9') return false;
+        } else if (minSize === '20+') {
+          if (p.size === '5-9' || p.size === '10-19') return false;
         } else if (minSize === '100+') {
-          if (p.size === '10-19' || p.size === '20-99') return false;
+          if (p.size === '5-9' || p.size === '10-19' || p.size === '20-99') return false;
         } else if (minSize === '500+') {
           if (p.size !== '500+') return false;
         }
@@ -258,7 +261,7 @@ export default function LeadDashboard() {
               ETS@Work <span className="aurora-text font-light">Lead Target Finder</span>
             </h1>
             <p className="text-slate-400 text-sm max-w-2xl mt-2">
-              Explore and filter eligible businesses (10+ employees) to target for transit incentives. Sort by transit scoring and priority layers to optimize outreach campaign yields.
+              Explore and filter eligible businesses (5+ employees) to target for transit incentives. Sort by transit scoring and priority layers to optimize outreach campaign yields.
             </p>
           </div>
           
@@ -276,7 +279,7 @@ export default function LeadDashboard() {
         {/* Dynamic Metric Widgets Bar */}
         <section className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-10">
           {[
-            { label: 'Total Eligible Employers', value: loading ? '...' : stats.total.toLocaleString(), detail: '>= 10 Employees total', color: 'cyan' },
+            { label: 'Total Eligible Employers', value: loading ? '...' : stats.total.toLocaleString(), detail: '>= 5 Employees total', color: 'cyan' },
             { label: 'Prime Targets (Tier 1)', value: loading ? '...' : stats.tier1.toLocaleString(), detail: 'High priority, great access', color: 'lime' },
             { label: 'Good Targets (Tier 2)', value: loading ? '...' : stats.tier2.toLocaleString(), detail: 'Strong mid-priority pool', color: 'pink' },
             { label: 'Avg Transit Score', value: loading ? '...' : `${stats.avgTransitScore}%`, detail: 'Citywide Lead Average', color: 'purple' },
@@ -332,7 +335,8 @@ export default function LeadDashboard() {
                 onChange={(e) => setMinSize(e.target.value)}
                 className="w-full bg-slate-900/60 border border-white/10 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:border-aurora-cyan/40 focus:ring-0"
               >
-                <option value="all">All Sizes (10+)</option>
+                <option value="all">All Sizes (5+)</option>
+                <option value="10+">10+ Employees</option>
                 <option value="20+">20+ Employees</option>
                 <option value="100+">100+ Employees</option>
                 <option value="500+">500+ Employees</option>

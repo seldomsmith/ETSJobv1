@@ -51,7 +51,7 @@ export default function ScrollytellingView() {
   const [activePeriod, setActivePeriod] = useState<'weekday' | 'midday' | 'weekend'>('weekday');
   const [etsLeadsData, setEtsLeadsData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [minSize, setMinSize] = useState<'all' | '20+' | '100+' | '500+'>('all');
+  const [minSize, setMinSize] = useState<'all' | '10+' | '20+' | '100+' | '500+'>('all');
   const [selectedTier, setSelectedTier] = useState<'all' | '1' | '2' | '3'>('all');
   const [excludeHybrid, setExcludeHybrid] = useState(false);
   const animFrameRef = useRef<number | null>(null);
@@ -148,10 +148,12 @@ export default function ScrollytellingView() {
         if (!matchesName && !matchesAddress && !matchesSector) return false;
       }
 
-      if (minSize === '20+') {
-        if (p.size === '10-19') return false;
+      if (minSize === '10+') {
+        if (p.size === '5-9') return false;
+      } else if (minSize === '20+') {
+        if (p.size === '5-9' || p.size === '10-19') return false;
       } else if (minSize === '100+') {
-        if (p.size === '10-19' || p.size === '20-99') return false;
+        if (p.size === '5-9' || p.size === '10-19' || p.size === '20-99') return false;
       } else if (minSize === '500+') {
         if (p.size !== '500+') return false;
       }
@@ -168,7 +170,7 @@ export default function ScrollytellingView() {
       const [lon, lat] = f.geometry.coordinates;
       const size = f.properties.size;
 
-      const offset = size === '500+' ? 0.0006 : size === '100-499' ? 0.0004 : size === '20-99' ? 0.0003 : 0.0002;
+      const offset = size === '500+' ? 0.0006 : size === '100-499' ? 0.0004 : size === '20-99' ? 0.0003 : size === '10-19' ? 0.0002 : 0.00015;
       const polygonCoords = [[
         [lon - offset, lat - offset],
         [lon + offset, lat - offset],
@@ -381,11 +383,12 @@ export default function ScrollytellingView() {
                   'fill-extrusion-height': [
                     'match',
                     ['get', 'size'],
+                    '5-9', 80,
                     '10-19', 150,
                     '20-99', 400,
                     '100-499', 900,
                     '500+', 1800,
-                    100
+                    50
                   ],
                   'fill-extrusion-opacity': 0.85,
                   'fill-extrusion-base': 0
@@ -607,9 +610,10 @@ export default function ScrollytellingView() {
                {/* Min Size Pills */}
                <div className="mb-4">
                   <label className="text-xxs font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-outfit">Min Employer Size</label>
-                  <div className="grid grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-5 gap-1">
                     {([
-                      { key: 'all', label: '10+' },
+                      { key: 'all', label: '5+' },
+                      { key: '10+', label: '10+' },
                       { key: '20+', label: '20+' },
                       { key: '100+', label: '100+' },
                       { key: '500+', label: '500+' }
@@ -617,7 +621,7 @@ export default function ScrollytellingView() {
                       <button
                         key={key}
                         onClick={() => setMinSize(key)}
-                        className={`text-[10px] py-1 rounded-md font-bold transition-all border ${
+                        className={`text-[9px] py-1 rounded font-bold transition-all border ${
                           minSize === key
                             ? 'bg-aurora-cyan/10 border-aurora-cyan text-aurora-cyan'
                             : 'bg-slate-900/60 border-white/5 text-slate-400 hover:text-white hover:bg-white/5'

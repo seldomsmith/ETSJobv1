@@ -81,13 +81,13 @@ print(f"  Loaded {len(df)} total businesses.")
 # Drop rows missing coordinates
 df = df.dropna(subset=["Longitude", "Latitude"])
 
-# Normalize sizes (replace en-dashes, strip spaces)
-df["Business Size"] = df["Business Size"].astype(str).str.replace("–", "-").str.replace("—", "-").str.strip()
+# Normalize sizes (replace en-dashes, strip spaces, convert <10 to 5-9)
+df["Business Size"] = df["Business Size"].astype(str).str.replace("<10", "5-9").str.replace("–", "-").str.replace("—", "-").str.strip()
 
-# Filter out '<10' and invalid/missing sizes
-valid_sizes = ["10-19", "20-99", "100-499", "500+"]
+# Filter for eligible sizes (5+ employees)
+valid_sizes = ["5-9", "10-19", "20-99", "100-499", "500+"]
 df_filtered = df[df["Business Size"].isin(valid_sizes)].copy()
-print(f"  Filtered to {len(df_filtered)} eligible businesses (size >= 10).")
+print(f"  Filtered to {len(df_filtered)} eligible businesses (size >= 5).")
 
 # 4. Map businesses to nearest DA using fast vectorized NumPy math
 print("Mapping businesses to nearest transit dissemination areas (DAs)...")
@@ -122,6 +122,7 @@ def compute_tier_and_scores(row):
     
     # Size multiplier weight
     size_weights = {
+        "5-9": 0.5,
         "10-19": 1.0,
         "20-99": 2.5,
         "100-499": 6.0,
@@ -141,8 +142,8 @@ def compute_tier_and_scores(row):
     # Balanced Tier classification for actionable B2B targeting
     if (size in ["100-499", "500+"] and transit_score >= 0.4) or (size == "20-99" and transit_score >= 0.7):
         tier = 1 # Prime Target (Large with decent transit, or Mid-sized with superb transit)
-    elif (size in ["100-499", "500+"]) or (size == "20-99" and transit_score >= 0.4) or (size == "10-19" and transit_score >= 0.7):
-        tier = 2 # Good Target (Large in transit deserts, Mid-sized with decent transit, or Small with superb transit)
+    elif (size in ["100-499", "500+"]) or (size == "20-99" and transit_score >= 0.4) or (size in ["5-9", "10-19"] and transit_score >= 0.7):
+        tier = 2 # Good Target (Large in transit deserts, Mid-sized with decent transit, or Small/Very Small with superb transit)
     else:
         tier = 3 # Low/Challenging Target (Mostly small/mid businesses in poor transit areas)
         

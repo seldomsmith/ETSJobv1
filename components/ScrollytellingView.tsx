@@ -1,5 +1,6 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import Map, { Source, Layer, NavigationControl, ViewStateChangeEvent } from 'react-map-gl/mapbox';
 import { motion } from 'framer-motion';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -7,7 +8,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 const MAPBOX_TOKEN = "pk.eyJ1Ijoic2VsZG9tc21pdGgiLCJhIjoiY21tdGY5bGxjMXg4YzJzb21mOTY4aTB2cyJ9.cLdZbTpTPB5196GaD7Vo-Q";
 
 const chapters = [
-  { id: 'baseline', title: 'Baseline Transit & Jobs', description: 'Overview of 236 active transit lines grouped by linear vectors and 3D Job Pillars rises in Edmonton.', layers: ['routes', 'job_centers'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.2, pitch: 45, bearing: -10 }, metrics: [{ label: 'Transit Lines', value: '236', type: 'cyan' }, { label: 'Job Centres', value: '1,047 DAs', type: 'lime' }] },
+  { id: 'baseline', title: 'ETS@Work Target leads', description: 'Explore 21,882 Edmonton businesses eligible for the ETS@Work program (>= 10 employees). 3D Pillars represent real businesses, colored by transit suitability (Green = Prime, Yellow = Good, Pink = Challenging) and extruded by workforce size.', layers: ['routes', 'ets_leads'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.2, pitch: 45, bearing: -10 }, metrics: [{ label: 'Eligible Employers', value: '21,882', type: 'cyan' }, { label: 'Prime Targets (Tier 1)', value: '476', type: 'lime' }] },
   { id: 'access-gap', title: 'The Accessibility Gap', description: 'The height of each 3D Hexagon indicates total jobs reachable within 30 minutes, weighted by travel speed. Jobs 5 mins away receive full 1.0x score, decaying down to remove center plateaus.', layers: ['hex_accessibility', 'routes'], viewState: { longitude: -113.4938, latitude: 53.5461, zoom: 11.5, pitch: 45, bearing: -20 }, metrics: [{ label: 'Accessibility', value: '30 mins', type: 'cyan' }, { label: 'Weighted Jobs', value: 'Decay Adjusted', type: 'pink' }] },
   { id: 'transit-penalty', title: 'The Time Gap', description: 'Watch 15 real commuters race from Edmonton’s highest-penalty suburbs into Downtown. Green dots are by car. Pink dots are by transit. The gap you see is not distance — it is time stolen from transit riders every single day.', layers: ['commute_race'], viewState: { longitude: -113.5738, latitude: 53.5261, zoom: 10.5, pitch: 35, bearing: -10 }, metrics: [{ label: 'Car', value: 'Arriving', type: 'cyan' }, { label: 'Transit', value: 'En Route…', type: 'pink' }] },
   { id: 'equity-divide', title: 'The Equity Divide', description: 'Combining social buffers reveals critical suburbs like Rutherford to belong to deficit quadrant limits.', layers: ['equity_map'], viewState: { longitude: -113.4038, latitude: 53.4661, zoom: 12.5, pitch: 60, bearing: -30 }, metrics: [{ label: 'Rutherford Equity', value: '1.0 Score', type: 'purple' }, { label: 'Job Access Link', value: '0.11 Ratio', type: 'lime' }] }
@@ -48,6 +49,11 @@ export default function ScrollytellingView() {
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
   const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(false);
   const [activePeriod, setActivePeriod] = useState<'weekday' | 'midday' | 'weekend'>('weekday');
+  const [etsLeadsData, setEtsLeadsData] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minSize, setMinSize] = useState<'all' | '20+' | '100+' | '500+'>('all');
+  const [selectedTier, setSelectedTier] = useState<'all' | '1' | '2' | '3'>('all');
+  const [excludeHybrid, setExcludeHybrid] = useState(false);
   const animFrameRef = useRef<number | null>(null);
   const progressRef = useRef<number>(0);
   const animCompletedRef = useRef<boolean>(false);
@@ -122,8 +128,106 @@ export default function ScrollytellingView() {
       .then(data => setPenaltyGridData(data))
       .catch(err => console.error(err));
 
-    fetch('/data/travel_times_weekday.parquet') // just to ensure fetch works, keeping same sequence
+    fetch('/data/ets_at_work_leads.geojson')
+      .then(r => r.json())
+      .then(data => setEtsLeadsData(data))
+      .catch(err => console.error(err));
   }, []);
+
+  // Filter and process ETS@Work target leads on-the-fly
+  const etsLeadsGeoJSON = useMemo(() => {
+    if (!etsLeadsData) return null;
+
+    const filteredFeatures = etsLeadsData.features.filter((f: any) => {
+      const p = f.properties;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = p.name.toLowerCase().includes(query);
+        const matchesAddress = p.address.toLowerCase().includes(query);
+        const matchesSector = p.sector.toLowerCase().includes(query);
+        if (!matchesName && !matchesAddress && !matchesSector) return false;
+      }
+
+      if (minSize === '20+') {
+        if (p.size === '10-19') return false;
+      } else if (minSize === '100+') {
+        if (p.size === '10-19' || p.size === '20-99') return false;
+      } else if (minSize === '500+') {
+        if (p.size !== '500+') return false;
+      }
+
+      if (excludeHybrid && p.hybrid === 'Yes') return false;
+
+      if (selectedTier !== 'all' && String(p.tier) !== String(selectedTier)) return false;
+
+      return true;
+    });
+
+    // Convert point coordinates to small 3D box polygons on-the-fly
+    const renderFeatures = filteredFeatures.slice(0, 2500).map((f: any) => {
+      const [lon, lat] = f.geometry.coordinates;
+      const size = f.properties.size;
+
+      const offset = size === '500+' ? 0.0006 : size === '100-499' ? 0.0004 : size === '20-99' ? 0.0003 : 0.0002;
+      const polygonCoords = [[
+        [lon - offset, lat - offset],
+        [lon + offset, lat - offset],
+        [lon + offset, lat + offset],
+        [lon - offset, lat + offset],
+        [lon - offset, lat - offset]
+      ]];
+
+      return {
+        ...f,
+        geometry: {
+          type: 'Polygon',
+          coordinates: polygonCoords
+        }
+      };
+    });
+
+    return {
+      type: 'FeatureCollection',
+      features: renderFeatures,
+      totalMatched: filteredFeatures.length
+    };
+  }, [etsLeadsData, searchQuery, minSize, excludeHybrid, selectedTier]);
+
+  const etsLeadsGeoJSONData = useMemo(() => {
+    if (!etsLeadsGeoJSON) return null;
+    return {
+      type: 'FeatureCollection',
+      features: etsLeadsGeoJSON.features
+    };
+  }, [etsLeadsGeoJSON]);
+
+  // Autocomplete search suggestions (max 5)
+  const searchSuggestions = useMemo(() => {
+    if (!etsLeadsData || !searchQuery || searchQuery.length < 2) return [];
+    const query = searchQuery.toLowerCase();
+    const matches: any[] = [];
+    for (const f of etsLeadsData.features) {
+      if (f.properties.name.toLowerCase().includes(query)) {
+        matches.push(f);
+        if (matches.length >= 5) break;
+      }
+    }
+    return matches;
+  }, [etsLeadsData, searchQuery]);
+
+  const handleSelectSuggestion = (company: any) => {
+    setSearchQuery(company.properties.name);
+    const [lon, lat] = company.geometry.coordinates;
+    setViewState(prev => ({
+      ...prev,
+      longitude: lon,
+      latitude: lat,
+      zoom: 15.5,
+      pitch: 60,
+      bearing: -10,
+      transitionDuration: 1500
+    } as any));
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -236,10 +340,16 @@ export default function ScrollytellingView() {
           mapboxAccessToken={MAPBOX_TOKEN} 
           mapStyle="mapbox://styles/mapbox/dark-v11" 
           style={{ width: "100vw", height: "100vh" }}
-          interactiveLayerIds={activeChap.id === 'transit-penalty' ? ['penalty-choropleth'] : []}
+          interactiveLayerIds={
+            activeChap.id === 'baseline'
+              ? ['ets-leads-layer']
+              : activeChap.id === 'transit-penalty'
+              ? ['penalty-choropleth']
+              : []
+          }
           onMouseMove={(evt: any) => {
              const feature = evt.features && evt.features[0];
-             if (feature && activeChap.id === 'transit-penalty') {
+             if (feature && (activeChap.id === 'transit-penalty' || activeChap.id === 'baseline')) {
                  setHoverInfo({ feature, x: evt.point.x, y: evt.point.y });
              } else {
                  setHoverInfo(null);
@@ -252,6 +362,37 @@ export default function ScrollytellingView() {
           <Source id="routes" type="geojson" data="/data/routes.geojson">
             <Layer id="routes-layer" type="line" layout={{ visibility: activeChap.layers.includes('routes') ? 'visible' : 'none' }} paint={{ 'line-color': ['match', ['get', 'type'], 'LRT', '#ffd700', 'High-Freq', '#f472b6', 'Local', '#22d3ee', '#22d3ee'], 'line-opacity': 0.8, 'line-width': 1.5 }} />
           </Source>
+
+          {etsLeadsGeoJSONData && (
+            <Source id="ets_leads" type="geojson" data={etsLeadsGeoJSONData}>
+              <Layer
+                id="ets-leads-layer"
+                type="fill-extrusion"
+                layout={{ visibility: activeChap.layers.includes('ets_leads') ? 'visible' : 'none' }}
+                paint={{
+                  'fill-extrusion-color': [
+                    'match',
+                    ['get', 'tier'],
+                    1, '#4ade80', // Tier 1 (Prime)
+                    2, '#eab308', // Tier 2 (Good)
+                    3, '#ec4899', // Tier 3 (Challenging)
+                    '#cbd5e1'
+                  ],
+                  'fill-extrusion-height': [
+                    'match',
+                    ['get', 'size'],
+                    '10-19', 150,
+                    '20-99', 400,
+                    '100-499', 900,
+                    '500+', 1800,
+                    100
+                  ],
+                  'fill-extrusion-opacity': 0.85,
+                  'fill-extrusion-base': 0
+                }}
+              />
+            </Source>
+          )}
 
           {jobCentersData && (
             <Source id="job_centers" type="geojson" data={jobCentersData}>
@@ -416,34 +557,152 @@ export default function ScrollytellingView() {
         {/* Interactive Industry Checkbox Control */}
         {activeChap.id === 'baseline' && (
           <>
-            <div className={`absolute top-24 right-4 z-20 glass-card p-4 max-w-[240px] pointer-events-auto h-auto max-h-[400px] overflow-y-auto w-full transition-all duration-500 transform ${isFiltersCollapsed ? 'translate-x-[120%] opacity-0' : 'translate-x-0'}`}>
-               <div className="flex justify-between items-center mb-3">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-widest block font-outfit">Filter Industries</span>
+            <div className={`absolute top-24 right-4 z-20 glass-card p-5 max-w-[320px] pointer-events-auto h-auto max-h-[90vh] overflow-y-auto w-full transition-all duration-500 transform ${isFiltersCollapsed ? 'translate-x-[120%] opacity-0' : 'translate-x-0'}`}>
+               <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white uppercase tracking-wider block font-outfit">ETS@Work Prospector</span>
+                    <span className="bg-aurora-cyan/10 border border-aurora-cyan/30 text-aurora-cyan text-[10px] px-1.5 py-0.5 rounded font-mono font-bold animate-pulse">B2B</span>
+                  </div>
                   <button onClick={() => setIsFiltersCollapsed(true)} className="text-slate-500 hover:text-white transition-colors bg-white/5 p-1 rounded">
                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
                   </button>
                </div>
-               <div className="flex flex-col gap-2">
-                   {jobCategories.map((cat) => (
-                      <label key={cat.name} className="flex items-center gap-2 cursor-pointer group text-xxs">
-                         <input 
-                            type="checkbox" 
-                            checked={activeCategories.includes(cat.name)}
-                            onChange={(e) => {
-                               if (e.target.checked) {
-                                  setActiveCategories(prev => [...prev, cat.name]);
-                               } else {
-                                  setActiveCategories(prev => prev.filter(n => n !== cat.name));
-                               }
-                            }}
-                            className="rounded border-white/10 bg-slate-900/80 text-aurora-cyan focus:ring-0"
-                         />
-                         <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                         <span className="text-slate-400 group-hover:text-white transition-colors truncate">{cat.name}</span>
-                      </label>
-                   ))}
+
+               {/* Search Box */}
+               <div className="mb-4 relative">
+                  <label className="text-xxs font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-outfit">Search Employers</label>
+                  <div className="relative">
+                    <input 
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="e.g. Acme Corp, 104 St..."
+                      className="w-full bg-slate-900/90 border border-white/10 rounded-lg py-2 pl-8 pr-8 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-aurora-cyan/50 focus:ring-0"
+                    />
+                    <svg className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    {searchQuery && (
+                      <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-2.5 text-slate-500 hover:text-white">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Search Autocomplete Suggestions */}
+                  {searchSuggestions.length > 0 && (
+                    <div className="absolute z-30 left-0 right-0 mt-1 bg-slate-950/95 border border-white/10 rounded-lg shadow-2xl max-h-[200px] overflow-y-auto pointer-events-auto">
+                      {searchSuggestions.map((s: any, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSelectSuggestion(s)}
+                          className="w-full text-left px-3 py-2 text-xxs text-slate-300 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0 flex flex-col gap-0.5"
+                        >
+                          <span className="font-bold text-white truncate">{s.properties.name}</span>
+                          <span className="text-slate-500 truncate">{s.properties.address}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                </div>
+
+               {/* Min Size Pills */}
+               <div className="mb-4">
+                  <label className="text-xxs font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-outfit">Min Employer Size</label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {([
+                      { key: 'all', label: '10+' },
+                      { key: '20+', label: '20+' },
+                      { key: '100+', label: '100+' },
+                      { key: '500+', label: '500+' }
+                    ] as const).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => setMinSize(key)}
+                        className={`text-[10px] py-1 rounded-md font-bold transition-all border ${
+                          minSize === key
+                            ? 'bg-aurora-cyan/10 border-aurora-cyan text-aurora-cyan'
+                            : 'bg-slate-900/60 border-white/5 text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+
+               {/* Tier Selector Pills */}
+               <div className="mb-4">
+                  <label className="text-xxs font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-outfit">Target Priority Tier</label>
+                  <div className="flex flex-col gap-1.5">
+                    {([
+                      { key: 'all', label: 'All Targets', colorClass: 'bg-slate-400' },
+                      { key: '1', label: 'Tier 1 • Prime Target', colorClass: 'bg-aurora-lime' },
+                      { key: '2', label: 'Tier 2 • Good Target', colorClass: 'bg-yellow-400' },
+                      { key: '3', label: 'Tier 3 • Challenging', colorClass: 'bg-aurora-pink' }
+                    ] as const).map(({ key, label, colorClass }) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedTier(key)}
+                        className={`text-xxs py-1.5 px-3 rounded-lg text-left font-bold transition-all border flex items-center gap-2 ${
+                          selectedTier === key
+                            ? 'bg-white/5 border-white/20 text-white'
+                            : 'bg-slate-900/60 border-transparent text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${colorClass} shadow-sm`} />
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+               </div>
+
+               {/* Exclude Hybrid Toggle */}
+               <div className="mb-5 flex items-center justify-between border-t border-white/5 pt-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xxs font-bold text-slate-300">Exclude Hybrid Offices</span>
+                    <span className="text-[10px] text-slate-500">Focus on daily full-time commuters</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      checked={excludeHybrid}
+                      onChange={(e) => setExcludeHybrid(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-900 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-aurora-cyan peer-checked:after:bg-slate-950 peer-checked:after:border-transparent"></div>
+                  </label>
+               </div>
+
+               {/* Matching Stats */}
+               <div className="bg-slate-950/80 rounded-xl p-3 border border-white/5 mb-4 font-outfit">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Matched Leads</span>
+                    <span className="text-xs font-mono font-bold text-aurora-cyan">
+                      {etsLeadsGeoJSON ? etsLeadsGeoJSON.totalMatched.toLocaleString() : '0'}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-aurora-gradient h-full rounded-full transition-all duration-500" 
+                      style={{ 
+                        width: `${Math.min(100, etsLeadsData ? ((etsLeadsGeoJSON?.totalMatched || 0) / etsLeadsData.features.length) * 100 : 0)}%` 
+                      }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-slate-500 block mt-1.5">
+                    * Showing top 2,500 on map for 60fps performance
+                  </span>
+               </div>
+
+               {/* Open Dashboard Link */}
+               <Link 
+                 href="/dashboard" 
+                 className="w-full py-2.5 rounded-lg bg-aurora-cyan/10 border border-aurora-cyan/30 text-aurora-cyan text-xxs font-extrabold hover:bg-aurora-cyan/20 transition-all duration-200 flex items-center justify-center gap-1.5 font-outfit"
+               >
+                 <span>Open Leads Finder Dashboard</span>
+                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+               </Link>
             </div>
+
             {isFiltersCollapsed && (
                <button onClick={() => setIsFiltersCollapsed(false)} className="absolute top-24 right-4 z-20 p-2 glass-card rounded h-8 w-8 flex items-center justify-center pointer-events-auto text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-300">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7M19 19l-7-7 7-7" /></svg>
@@ -526,7 +785,7 @@ export default function ScrollytellingView() {
                 <span className="text-xxs text-slate-400">Moderate (30–50% slower)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: '#db2777' }} />
+<div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: '#db2777' }} />
                 <span className="text-xxs text-slate-400">Severe (50–70% slower)</span>
               </div>
               <div className="flex items-center gap-2">
@@ -539,27 +798,73 @@ export default function ScrollytellingView() {
 
         {/* Floating Tooltip */}
         {hoverInfo && hoverInfo.feature && (
-          <div className="absolute pointer-events-none z-50 glass-card p-4 min-w-[200px]"
+          <div className="absolute pointer-events-none z-50 glass-card p-4 min-w-[240px]"
                style={{ left: hoverInfo.x + 15, top: hoverInfo.y + 15 }}>
-              <span className="text-xxs uppercase font-bold text-slate-500 tracking-widest block mb-2">DA UID: {hoverInfo.feature.properties.DAUID || "N/A"}</span>
-              
-              <div className="w-full bg-slate-800 h-[1px] mb-2"></div>
-              
-              <div className="flex flex-col gap-2">
-                 <div className="flex justify-between items-center gap-4">
-                    <span className="text-xs text-slate-300">Transit Penalty:</span>
-                    <span className="text-sm font-bold text-aurora-pink">
-                        {hoverInfo.feature.properties.penalty_score?.toFixed(2) || "0.00"}
+            {activeChap.id === 'baseline' ? (
+              <>
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1 font-outfit">
+                  Tier {hoverInfo.feature.properties.tier} Lead • {hoverInfo.feature.properties.size} Employees
+                </span>
+                <h3 className="text-sm font-extrabold text-white mb-2 leading-snug font-outfit">{hoverInfo.feature.properties.name}</h3>
+                
+                <div className="w-full bg-slate-800 h-[1px] mb-2.5"></div>
+                
+                <div className="flex flex-col gap-1.5 text-xxs">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-500 font-bold uppercase">Address:</span>
+                    <span className="text-slate-300 truncate max-w-[140px] text-right font-medium" title={hoverInfo.feature.properties.address}>
+                      {hoverInfo.feature.properties.address}
                     </span>
-                 </div>
-                 <div className="flex justify-between items-center gap-4">
-                    <span className="text-xs text-slate-300">Avg Wait Time:</span>
-                    <span className="text-sm font-bold text-white">
-                        {hoverInfo.feature.properties.avg_wait_time_minutes?.toFixed(1) || "0"} min
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-500 font-bold uppercase">Sector:</span>
+                    <span className="text-slate-300 truncate max-w-[140px] text-right font-medium" title={hoverInfo.feature.properties.sector}>
+                      {hoverInfo.feature.properties.sector}
                     </span>
-                 </div>
-              </div>
-            </div>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-500 font-bold uppercase">Hybrid Work:</span>
+                    <span className={`font-extrabold ${hoverInfo.feature.properties.hybrid === 'Yes' ? 'text-aurora-pink' : 'text-aurora-cyan'}`}>
+                      {hoverInfo.feature.properties.hybrid}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-white/10 pt-2 mt-1">
+                    <span className="text-slate-400 font-bold">Transit Score:</span>
+                    <span className="font-extrabold text-aurora-lime">
+                      {(hoverInfo.feature.properties.transit_score * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">Priority Score:</span>
+                    <span className="font-extrabold text-aurora-cyan">
+                      {hoverInfo.feature.properties.lead_score?.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-2 font-outfit">DA UID: {hoverInfo.feature.properties.DAUID || "N/A"}</span>
+                
+                <div className="w-full bg-slate-800 h-[1px] mb-2.5"></div>
+                
+                <div className="flex flex-col gap-2">
+                   <div className="flex justify-between items-center gap-4">
+                      <span className="text-xs text-slate-300">Transit Penalty:</span>
+                      <span className="text-sm font-bold text-aurora-pink">
+                          {hoverInfo.feature.properties.penalty_score?.toFixed(2) || "0.00"}
+                      </span>
+                   </div>
+                   <div className="flex justify-between items-center gap-4">
+                      <span className="text-xs text-slate-300">Avg Wait Time:</span>
+                      <span className="text-sm font-bold text-white">
+                          {hoverInfo.feature.properties.avg_wait_time_minutes?.toFixed(1) || "0"} min
+                      </span>
+                   </div>
+                </div>
+              </>
+            )}
+          </div>
         )}
 
       </div>

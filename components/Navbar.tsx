@@ -1,6 +1,17 @@
+'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function Navbar() {
+  const pathname = usePathname();
+
+  const navLinks = [
+    { href: '/',           label: 'Transit Map' },
+    { href: '/dashboard',  label: 'Lead Finder' },
+  ];
+
+  const comingSoon = ['Equity Index', 'Reports'];
+
   return (
     <nav className="flex justify-between items-center py-6 px-8 border-b border-white/5 sticky top-0 bg-slate-950/80 backdrop-blur-md z-50">
       <div className="flex items-center space-x-3">
@@ -13,11 +24,38 @@ export default function Navbar() {
         </div>
       </div>
       
-      <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
-        <Link href="/" className="text-white hover:text-aurora-cyan transition-colors">Dashboard</Link>
-        <Link href="/scrollytelling" className="text-slate-400 hover:text-white transition-colors">Maps</Link>
-        <a href="#" className="text-slate-400 hover:text-white transition-colors">Equity Index</a>
-        <a href="#" className="text-slate-400 hover:text-white transition-colors">Reports</a>
+      <div className="hidden md:flex items-center space-x-2 text-sm font-medium">
+        {navLinks.map(({ href, label }) => {
+          const isActive = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`px-3 py-1.5 rounded-lg transition-all duration-200 ${
+                isActive
+                  ? 'text-white bg-white/8 border border-white/10'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              {label}
+            </Link>
+          );
+        })}
+
+        <div className="w-px h-4 bg-white/10 mx-2" />
+
+        {comingSoon.map((label) => (
+          <span
+            key={label}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 cursor-not-allowed select-none"
+            title="Coming soon"
+          >
+            {label}
+            <span className="text-[9px] font-bold uppercase tracking-wider bg-slate-800 border border-white/5 text-slate-500 px-1.5 py-0.5 rounded">
+              soon
+            </span>
+          </span>
+        ))}
       </div>
 
       <div className="flex items-center space-x-4">

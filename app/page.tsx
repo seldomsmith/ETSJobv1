@@ -7,7 +7,7 @@ const ScrollytellingView = dynamic(() => import('@/components/ScrollytellingView
 
 export default function ScrollytellingPage() {
   return (
-    <main className="min-h-screen bg-slate-950">
+    <main className="min-h-screen">
       <Navbar />
       <ScrollytellingView />
     </main>

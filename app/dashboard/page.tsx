@@ -305,7 +305,7 @@ export default function LeadDashboard() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 font-outfit pb-20">
+    <main className="min-h-screen font-outfit pb-20">
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-8 py-12">

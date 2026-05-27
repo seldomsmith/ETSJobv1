@@ -6,8 +6,9 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const navLinks = [
-    { href: '/',           label: 'Transit Map' },
-    { href: '/dashboard',  label: 'Lead Finder' },
+    { href: '/',                  label: 'Transit Map' },
+    { href: '/market-research',   label: 'ETS@Work Research' },
+    { href: '/dashboard',         label: 'Lead Finder' },
   ];
 
   const comingSoon = ['Equity Index', 'Reports'];
@@ -19,8 +20,8 @@ export default function Navbar() {
           <div className="w-full h-full bg-slate-950 rounded-[7px] flex items-center justify-center font-bold text-xs">ET</div>
         </div>
         <div className="flex flex-col">
-          <span className="aurora-text text-xl font-bold leading-none">ETS INSIGHT</span>
-          <span className="text-[10px] text-slate-500 tracking-[0.2em] font-bold uppercase">Enterprise Transit analytics</span>
+          <span className="aurora-text text-xl font-bold leading-none">ETS and Edmonton Jobs</span>
+          <span className="text-[10px] text-slate-500 tracking-[0.2em] font-bold uppercase">Market Research Dashboard</span>
         </div>
       </div>
       
@@ -59,13 +60,9 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center space-x-4">
-        <button className="px-4 py-2 rounded-full border border-white/10 text-sm hover:bg-white/5 transition-all">
-          Settings
-        </button>
-        <button className="px-4 py-2 rounded-full bg-aurora-cyan text-slate-950 text-sm font-bold shadow-lg shadow-aurora-cyan/20 hover:scale-105 transition-transform">
-          Export Data
-        </button>
+        {/* Clean right side header */}
       </div>
     </nav>
   )
 }
+

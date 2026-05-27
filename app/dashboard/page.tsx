@@ -43,10 +43,13 @@ export default function LeadDashboard() {
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
-  const [minSize, setMinSize] = useState<string>('all');
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [hybridStatus, setHybridStatus] = useState<string>('all');
   const [selectedSector, setSelectedSector] = useState<string>('all');
+  
+  // Custom Logarithmic Snapping Size Slider Index States (0-4)
+  const [minSizeIdx, setMinSizeIdx] = useState(0);
+  const [maxSizeIdx, setMaxSizeIdx] = useState(4);
   
   // Table sorting & pagination
   const [sortBy, setSortBy] = useState<keyof LeadProperties>('lead_score');
@@ -73,7 +76,7 @@ export default function LeadDashboard() {
   // Reset pagination on search filter change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, minSize, selectedTier, hybridStatus, selectedSector]);
+  }, [searchQuery, minSizeIdx, maxSizeIdx, selectedTier, hybridStatus, selectedSector]);
 
   // Extract unique sectors for dropdown filter
   const uniqueSectors = useMemo(() => {
@@ -128,17 +131,10 @@ export default function LeadDashboard() {
         }
       }
 
-      // Workforce size
-      if (minSize !== 'all') {
-        if (minSize === '10+') {
-          if (p.size === '5-9') return false;
-        } else if (minSize === '20+') {
-          if (p.size === '5-9' || p.size === '10-19') return false;
-        } else if (minSize === '100+') {
-          if (p.size === '5-9' || p.size === '10-19' || p.size === '20-99') return false;
-        } else if (minSize === '500+') {
-          if (p.size !== '500+') return false;
-        }
+      // Snapping size range matching
+      const companySizeIndex = sizeValues[p.size] !== undefined ? sizeValues[p.size] : -1;
+      if (companySizeIndex < minSizeIdx || companySizeIndex > maxSizeIdx) {
+        return false;
       }
 
       // Priority tier
@@ -158,7 +154,7 @@ export default function LeadDashboard() {
 
       return true;
     });
-  }, [leadsData, searchQuery, minSize, selectedTier, hybridStatus, selectedSector]);
+  }, [leadsData, searchQuery, minSizeIdx, maxSizeIdx, selectedTier, hybridStatus, selectedSector]);
 
   // Sort logic
   const sortedLeads = useMemo(() => {
@@ -327,20 +323,61 @@ export default function LeadDashboard() {
               </div>
             </div>
 
-            {/* Min Size filter */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xxs font-bold text-slate-400 uppercase">Workforce Size</label>
-              <select
-                value={minSize}
-                onChange={(e) => setMinSize(e.target.value)}
-                className="w-full bg-slate-900/60 border border-white/10 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:border-aurora-cyan/40 focus:ring-0"
-              >
-                <option value="all">All Sizes (5+)</option>
-                <option value="10+">10+ Employees</option>
-                <option value="20+">20+ Employees</option>
-                <option value="100+">100+ Employees</option>
-                <option value="500+">500+ Employees</option>
-              </select>
+            {/* Dual Logarithmic snapping Size Slider */}
+            <div className="flex flex-col gap-1.5 font-sans">
+              <label className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">
+                Workforce Size: <span className="text-aurora-cyan font-extrabold">
+                  {minSizeIdx === 0 && maxSizeIdx === 4 ? 'All' : `${[5, 10, 20, 100, '500+'][minSizeIdx]} - ${[5, 10, 20, 100, '500+'][maxSizeIdx]}`}
+                </span>
+              </label>
+              <div className="relative pt-3 pb-1 px-1">
+                <div className="relative h-2 w-full rounded bg-slate-900">
+                  {/* Highlighted active range */}
+                  <div
+                    className="absolute h-2 bg-aurora-gradient rounded"
+                    style={{
+                      left: `${(minSizeIdx / 4) * 100}%`,
+                      right: `${100 - (maxSizeIdx / 4) * 100}%`
+                    }}
+                  />
+                  <input
+                    type="range"
+                    min="0"
+                    max="4"
+                    step="1"
+                    value={minSizeIdx}
+                    onChange={(e) => setMinSizeIdx(Math.min(parseInt(e.target.value), maxSizeIdx))}
+                    className="absolute pointer-events-none appearance-none bg-transparent w-full h-2 top-0 left-0 z-20 outline-none range-thumb-cyan"
+                  />
+                  <input
+                    type="range"
+                    min="0"
+                    max="4"
+                    step="1"
+                    value={maxSizeIdx}
+                    onChange={(e) => setMaxSizeIdx(Math.max(parseInt(e.target.value), minSizeIdx))}
+                    className="absolute pointer-events-none appearance-none bg-transparent w-full h-2 top-0 left-0 z-20 outline-none range-thumb-cyan"
+                  />
+                </div>
+                <div className="flex justify-between mt-2.5 text-[9px] font-bold text-slate-500 px-0.5 select-none">
+                  {['5', '10', '20', '100', '500+'].map((lbl, idx) => (
+                    <span
+                      key={lbl}
+                      onClick={() => {
+                        if (idx <= maxSizeIdx) setMinSizeIdx(idx);
+                        else setMaxSizeIdx(idx);
+                      }}
+                      className={`cursor-pointer transition-colors ${
+                        idx >= minSizeIdx && idx <= maxSizeIdx
+                          ? 'text-aurora-cyan font-bold'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      {lbl}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Priority Tier filter */}

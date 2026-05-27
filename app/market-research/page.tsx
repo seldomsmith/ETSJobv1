@@ -9,7 +9,7 @@ const MarketResearchView = dynamic(() => import('@/components/MarketResearchView
 
 export default function MarketResearchPage() {
   return (
-    <main className="min-h-screen bg-slate-950 flex flex-col text-slate-100 font-sans relative overflow-hidden">
+    <main className="h-screen bg-slate-950 flex flex-col text-slate-100 font-sans relative overflow-hidden">
       <Navbar />
       <MarketResearchView />
     </main>

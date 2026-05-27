@@ -177,7 +177,7 @@ export default function MarketResearchView() {
     : ['match', ['get', 'tier'], 1, '#4ade80', 2, '#eab308', 3, '#ec4899', '#cbd5e1'];
 
   return (
-    <div className="relative w-full flex-1 h-[calc(100vh-76px)]">
+    <div className="relative w-full flex-1 h-full overflow-hidden">
       <Map
         {...viewState}
         onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)}

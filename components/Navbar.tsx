@@ -65,7 +65,7 @@ export default function Navbar() {
           {comingSoon.map((label) => (
             <span
               key={label}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 cursor-not-allowed select-none"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 cursor-not-allowed select-none"
               title="Coming soon"
             >
               {label}

@@ -63,12 +63,20 @@ This task list tracks the progress of the ETS@Work prospecting tool upgrades to 
   - [x] **Navbar routing**: Update "ETS@Work Research" nav link → `/market-research`
   - [x] Commit and push Phase 7 changes to GitHub
 
-- [ ] **Phase 8: Settings Panel & Light Theme Toggle**
-  - [ ] **Settings Button**: Re-integrate settings button or mechanism inside global Header/Navbar.
-  - [ ] **Settings Modal**: Build a premium modal/slide-out panel containing system settings.
-  - [ ] **Light Theme Map**: Add light map view option using `mapbox://styles/mapbox/light-v11` (renders white map background).
-  - [ ] **Navy Transit Lines**: Re-color GTFS routes layer on light theme to deep navy blue for vibrant contrast.
-  - [ ] **Pinch Darker Tiers**: Darken the 3D pillar fill colors on light theme to preserve clear readability against a white background.
-  - [ ] **Global Sync**: Connect theme selection state globally across scrollytelling and market research route nodes.
+- [x] **Phase 8: Settings Panel & Light Theme Toggle**
+  - [x] **Settings Button**: Re-integrate settings button or mechanism inside global Header/Navbar.
+  - [x] **Settings Modal**: Build a premium modal/slide-out panel containing system settings.
+  - [x] **Light Theme Map**: Add light map view option using `mapbox://styles/mapbox/light-v11` (renders white map background).
+  - [x] **Navy Transit Lines**: Re-color GTFS routes layer on light theme to deep navy blue for vibrant contrast.
+  - [x] **Pinch Darker Tiers**: Darken the 3D pillar fill colors on light theme to preserve clear readability against a white background.
+  - [x] **Global Sync**: Connect theme selection state globally across scrollytelling and market research route nodes.
+
+- [x] **Phase 9: Bug Fixes (Map Rendering & Navbar Settings Button)**
+  - [x] **Diagnose layout/flex constraints**: Verify dynamic page bounds and overflow.
+  - [x] **Implement page wrapper fix**: Modify `/market-research` page wrapper classes to `h-screen overflow-hidden` in `app/market-research/page.tsx`.
+  - [x] **Implement Map container fix**: Remove redundant `h-[calc(100vh-76px)]` class and set to `h-full overflow-hidden` in `components/MarketResearchView.tsx`.
+  - [x] **Navbar responsiveness fix**: Update `components/Navbar.tsx` to hide "coming soon" badges on smaller/medium viewports (`hidden lg:flex`).
+  - [x] **Verify changes**: Conduct full review of layout parameters and class alignment.
+
 
 

@@ -199,48 +199,34 @@ export default function LeadDashboard() {
     ];
   }, [filteredLeads]);
 
+  // ── Shared html2canvas section export utility ──
+  const exportSection = async (elementId: string, filename: string) => {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const isLight = document.documentElement.classList.contains('light');
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: isLight ? '#ffffff' : '#0f172a',
+        logging: false,
+      });
+      const pngUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = pngUrl;
+      link.download = `${filename}_${new Date().toISOString().split('T')[0]}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
+  };
+
   // Convert Bar Chart SVG to Canvas and Download as PNG
   const handleDownloadChart = () => {
-    const chartContainer = document.getElementById('tier-distribution-chart');
-    if (!chartContainer) return;
-    const svgEl = chartContainer.querySelector('svg');
-    if (!svgEl) return;
-    
-    try {
-      const svgString = new XMLSerializer().serializeToString(svgEl);
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-      const DOMURL = window.URL || window.webkitURL || window;
-      const url = DOMURL.createObjectURL(svgBlob);
-      
-      const image = new Image();
-      image.onload = () => {
-        const canvas = document.createElement('canvas');
-        const scale = 2; // Scale for high quality PNG
-        canvas.width = svgEl.clientWidth * scale;
-        canvas.height = svgEl.clientHeight * scale;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        
-        const isLight = document.documentElement.classList.contains('light');
-        ctx.fillStyle = isLight ? '#ffffff' : '#0f172a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.scale(scale, scale);
-        ctx.drawImage(image, 0, 0);
-        
-        const pngUrl = canvas.toDataURL('image/png');
-        const downloadLink = document.createElement('a');
-        downloadLink.href = pngUrl;
-        downloadLink.download = `ets_work_tier_distribution_${new Date().toISOString().split('T')[0]}.png`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-        DOMURL.revokeObjectURL(url);
-      };
-      image.src = url;
-    } catch (error) {
-      console.error('Error exporting bar chart to PNG image:', error);
-    }
+    exportSection('tier-distribution-chart', 'ets_work_tier_distribution');
   };
 
   // Sort logic
@@ -360,7 +346,7 @@ export default function LeadDashboard() {
         </section>
 
         {/* Dynamic Metric Widgets Bar */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-10">
+        <section id="summary-stats-panel" className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-10">
           {[
             { label: 'Total Eligible Employers', value: loading ? '...' : stats.total.toLocaleString(), detail: '>= 5 Employees total', color: 'cyan' },
             { label: 'Prime Targets (Tier 1)', value: loading ? '...' : stats.tier1.toLocaleString(), detail: 'High priority, great access', color: 'lime' },
@@ -382,6 +368,19 @@ export default function LeadDashboard() {
             </div>
           ))}
         </section>
+
+        {/* Stats Export Button */}
+        {!loading && (
+          <div className="flex justify-end mb-6 -mt-4">
+            <button
+              onClick={() => exportSection('summary-stats-panel', 'ets_work_summary_stats')}
+              className="px-4 py-2 rounded-lg bg-slate-800 border border-white/5 text-[11px] font-bold text-slate-300 hover:text-white hover:border-white/20 transition-all flex items-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Export Summary Stats
+            </button>
+          </div>
+        )}
 
         {/* Advanced Filters Panel */}
         <section className="glass-card p-6 mb-8 border border-white/5">

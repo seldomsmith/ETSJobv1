@@ -269,14 +269,20 @@ export default function MarketResearchView() {
 
           {/* Suggestions Autocomplete */}
           {searchSuggestions.length > 0 && (
-            <div className="absolute z-30 left-0 right-0 mt-1 bg-slate-950 border border-white/10 rounded-lg shadow-2xl max-h-[180px] overflow-y-auto">
+            <div className={`absolute z-30 left-0 right-0 mt-1 border rounded-lg shadow-2xl max-h-[180px] overflow-y-auto ${
+              activeTheme === 'light' ? 'bg-white border-slate-200' : 'bg-slate-950 border-white/10'
+            }`}>
               {searchSuggestions.map((s: any, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleSelectSuggestion(s)}
-                  className="w-full text-left px-3 py-2 text-[11px] text-slate-300 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0 flex flex-col gap-0.5"
+                  className={`w-full text-left px-3 py-2 text-[11px] transition-colors border-b last:border-0 flex flex-col gap-0.5 ${
+                    activeTheme === 'light'
+                      ? 'text-slate-700 hover:bg-slate-50 border-slate-100'
+                      : 'text-slate-300 hover:bg-white/5 border-white/5'
+                  }`}
                 >
-                  <span className="font-bold text-white truncate">{s.properties.name}</span>
+                  <span className={`font-bold truncate ${activeTheme === 'light' ? 'text-slate-900' : 'text-white'}`}>{s.properties.name}</span>
                   <span className="text-slate-500 truncate text-[10px]">{s.properties.address}</span>
                 </button>
               ))}
@@ -292,7 +298,7 @@ export default function MarketResearchView() {
 
           <div className="relative pt-4 pb-2 px-1">
             {/* Overlapping Range Sliders */}
-            <div className="relative h-2 w-full rounded bg-slate-800">
+            <div className={`relative h-2 w-full rounded ${activeTheme === 'light' ? 'bg-slate-200' : 'bg-slate-800'}`}>
               {/* Active selection bar */}
               <div
                 className="absolute h-2 bg-aurora-gradient rounded"
@@ -358,20 +364,30 @@ export default function MarketResearchView() {
               { key: '1', label: 'Tier 1: Prime ETS@Work Target', colorClass: 'bg-aurora-lime' },
               { key: '2', label: 'Tier 2: Good ETS@Work Target', colorClass: 'bg-yellow-400' },
               { key: '3', label: 'Tier 3: Challenging ETS@Work Targets', colorClass: 'bg-aurora-pink' }
-            ] as const).map(({ key, label, colorClass }) => (
-              <button
-                key={key}
-                onClick={() => setSelectedTier(key)}
-                className={`text-xs py-1.5 px-3 rounded-lg text-left font-bold transition-all border flex items-center gap-2 ${
-                  selectedTier === key
-                    ? 'bg-white/5 border-white/20 text-white'
-                    : 'bg-slate-900/60 border-transparent text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <div className={`w-2.5 h-2.5 rounded-full ${colorClass} shadow-sm`} />
-                <span>{label}</span>
-              </button>
-            ))}
+            ] as const).map(({ key, label, colorClass }) => {
+              const isSelected = selectedTier === key;
+              let buttonStyles = '';
+              if (activeTheme === 'light') {
+                buttonStyles = isSelected
+                  ? 'bg-white border-slate-900 text-slate-900 shadow-md scale-102'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900';
+              } else {
+                buttonStyles = isSelected
+                  ? 'bg-white/5 border-white/20 text-white'
+                  : 'bg-slate-900/60 border-transparent text-slate-400 hover:text-white hover:bg-white/5';
+              }
+
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedTier(key)}
+                  className={`text-xs py-1.5 px-3 rounded-lg text-left font-bold transition-all border flex items-center gap-2 ${buttonStyles}`}
+                >
+                  <div className={`w-2.5 h-2.5 rounded-full ${colorClass} shadow-sm`} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -418,7 +434,7 @@ export default function MarketResearchView() {
           href="/dashboard"
           className="w-full py-3 rounded-xl bg-aurora-cyan text-slate-950 text-xs font-extrabold shadow-lg shadow-aurora-cyan/20 hover:scale-102 hover:shadow-aurora-cyan/30 transition-all flex items-center justify-center gap-2 font-outfit"
         >
-          <span>Open Prospect Finder Table</span>
+          <span>Open ETS@Work Targets</span>
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
         </Link>
       </div>

@@ -86,5 +86,10 @@ This task list tracks the progress of the ETS@Work prospecting tool upgrades to 
   - [x] **True Light Theme integration**: Configure root `.light` class toggling in `Navbar.tsx` to change body and card variables globally.
   - [x] **High-contrast light styling**: Add high-contrast white card, input dropdown, and table overrides in `globals.css`.
 
-
-
+- [ ] **Phase 11: Contrast & UI Polish Fixes**
+  - [ ] Reset range input styling inside `.light` in `globals.css` to fix slider overlap
+  - [ ] Lock navigation header bg and force white/light text inside header bar
+  - [ ] Add white card background with dark text for priority suitability tier buttons
+  - [ ] Change "Open Prospect finder table" CTA to "Open ETS@Work Targets"
+  - [ ] Add high contrast overrides for table rows, headers, and text colors in light mode
+  - [ ] Ensure all remaining dark boxes keep white text in light mode

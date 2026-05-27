@@ -66,27 +66,136 @@ body {
     color: #0f172a !important;
   }
 
-  .light input, .light select {
+  .light input:not([type="range"]), .light select {
     background-color: #ffffff !important;
     color: #0f172a !important;
     border-color: rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .light input[type="range"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   .light input::placeholder {
     color: #94a3b8 !important;
   }
 
+  /* 📌 Lock Navbar to Dark Navy Background & White Text */
+  .light nav.sticky {
+    background-color: #0f172a !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+  .light nav.sticky .text-white,
+  .light nav.sticky .text-slate-400,
+  .light nav.sticky .text-slate-300,
+  .light nav.sticky .text-slate-500,
+  .light nav.sticky span,
+  .light nav.sticky a,
+  .light nav.sticky button {
+    color: #ffffff !important;
+  }
+  .light nav.sticky .text-slate-400,
+  .light nav.sticky svg {
+    color: #cbd5e1 !important;
+  }
+  .light nav.sticky .text-slate-500 {
+    color: #94a3b8 !important;
+  }
+  .light nav.sticky button:hover,
+  .light nav.sticky a:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  /* 📌 Table and Grid Improvements */
+  .light table {
+    color: #0f172a !important;
+  }
+
   .light th {
-    color: #334155 !important;
-    background-color: rgba(0, 0, 0, 0.03) !important;
+    color: #0f172a !important;
+    font-weight: 800 !important;
+    background-color: rgba(0, 0, 0, 0.04) !important;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1) !important;
   }
 
   .light td {
-    border-color: rgba(0, 0, 0, 0.06) !important;
+    color: #1e293b !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .light td .text-slate-300 {
+    color: #0f172a !important;
+  }
+
+  .light td .text-slate-400 {
+    color: #334155 !important;
+  }
+
+  .light td .text-slate-500 {
+    color: #475569 !important;
   }
 
   .light tr:hover {
     background-color: rgba(0, 0, 0, 0.015) !important;
+  }
+
+  /* ⚡ Dynamic Dark Colors for High Readability on White Ground */
+  .light .text-aurora-cyan,
+  .light td.text-aurora-cyan,
+  .light span.text-aurora-cyan,
+  .light .text-cyan-400 {
+    color: #0891b2 !important;
+  }
+
+  .light .text-aurora-lime {
+    color: #16a34a !important;
+  }
+
+  .light .text-aurora-pink {
+    color: #db2777 !important;
+  }
+
+  .light .text-yellow-400 {
+    color: #ca8a04 !important;
+  }
+
+  .light .bg-slate-900 {
+    background-color: #e2e8f0 !important;
+  }
+
+  /* ⚡ Dynamic Accessibly Dark Tiers for badging */
+  .light .bg-aurora-lime\/10 {
+    background-color: rgba(22, 163, 74, 0.1) !important;
+    border-color: rgba(22, 163, 74, 0.25) !important;
+    color: #16a34a !important;
+  }
+
+  .light .bg-yellow-400\/10 {
+    background-color: rgba(202, 138, 4, 0.1) !important;
+    border-color: rgba(202, 138, 4, 0.25) !important;
+    color: #ca8a04 !important;
+  }
+
+  .light .bg-aurora-pink\/10 {
+    background-color: rgba(219, 39, 119, 0.1) !important;
+    border-color: rgba(219, 39, 119, 0.25) !important;
+    color: #db2777 !important;
+  }
+
+  /* 📌 Stats box and explicit Dark Box Color Forcing */
+  .light .bg-slate-950\/80,
+  .light .bg-slate-950 {
+    color: #ffffff !important;
+  }
+  .light .bg-slate-950\/80 .text-slate-400,
+  .light .bg-slate-950 .text-slate-400 {
+    color: #cbd5e1 !important;
+  }
+  .light .bg-slate-950\/80 .text-slate-500,
+  .light .bg-slate-950 .text-slate-500 {
+    color: #94a3b8 !important;
   }
 
   .light footer {

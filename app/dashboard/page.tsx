@@ -38,6 +38,24 @@ const sizeValues: Record<string, number> = {
   "500+": 4
 };
 
+const ETS_MEMBER_KEYS = [
+  "apegga", "atb financial", "atb", "bee-clean", "bee clean", "biamonte", "boyle street",
+  "bryan & company", "bryan and company", "campus tower", "canada place", "commissionaires",
+  "canadian linen", "canterbury", "concordia university", "dentons", "dialog alberta",
+  "dialog architecture", "doubletree", "newcomer centre", "explore edmonton", "emery jamieson",
+  "exciton", "macewan", "greater edmonton", "ikea", "independent advocacy", "fairmont",
+  "hotel macdonald", "kpmg", "quality one", "marriott", "jw marriott", "metropolitan credit",
+  "metterra", "mlt", "nait", "mnp", "norquest", "ogilvie", "peace hills", "reimagine",
+  "reynolds mirth", "sandman", "stantec", "citadel", "brick warehouse", "westin", "vallen",
+  "witten"
+];
+
+function isCurrentMember(name: string): boolean {
+  if (!name) return false;
+  const lower = name.toLowerCase();
+  return ETS_MEMBER_KEYS.some(k => lower.includes(k));
+}
+
 export default function LeadDashboard() {
   const [leadsData, setLeadsData] = useState<LeadFeature[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +65,7 @@ export default function LeadDashboard() {
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [hybridStatus, setHybridStatus] = useState<string>('all');
   const [selectedSector, setSelectedSector] = useState<string>('all');
+  const [showCurrentOnly, setShowCurrentOnly] = useState(false);
   
   // Custom Logarithmic Snapping Size Slider Index States (0-4)
   const [minSizeIdx, setMinSizeIdx] = useState(0);
@@ -77,7 +96,7 @@ export default function LeadDashboard() {
   // Reset pagination on search filter change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, minSizeIdx, maxSizeIdx, selectedTier, hybridStatus, selectedSector]);
+  }, [searchQuery, minSizeIdx, maxSizeIdx, selectedTier, hybridStatus, selectedSector, showCurrentOnly]);
 
   // Extract unique sectors for dropdown filter
   const uniqueSectors = useMemo(() => {
@@ -153,9 +172,14 @@ export default function LeadDashboard() {
         return false;
       }
 
+      // Current ETS@Work Members
+      if (showCurrentOnly && !isCurrentMember(p.name)) {
+        return false;
+      }
+
       return true;
     });
-  }, [leadsData, searchQuery, minSizeIdx, maxSizeIdx, selectedTier, hybridStatus, selectedSector]);
+  }, [leadsData, searchQuery, minSizeIdx, maxSizeIdx, selectedTier, hybridStatus, selectedSector, showCurrentOnly]);
 
   // Count matching businesses in each tier dynamically
   const tierCounts = useMemo(() => {
@@ -366,7 +390,7 @@ export default function LeadDashboard() {
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Prospect Filtering Grid</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             {/* Search Box */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xxs font-bold text-slate-400 uppercase">Search Keywords</label>
@@ -489,6 +513,23 @@ export default function LeadDashboard() {
                   <option key={sector} value={sector}>{sector}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Current ETS@Work existing members toggle */}
+            <div className="flex flex-col gap-1.5 justify-center border-l border-white/5 pl-4">
+              <label className="text-xxs font-bold text-slate-400 uppercase">Existing Members</label>
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[11px] text-slate-300 font-bold">Current ETS@Work</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showCurrentOnly}
+                    onChange={(e) => setShowCurrentOnly(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-900 rounded-full peer peer-checked:bg-aurora-cyan after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-slate-950"></div>
+                </label>
+              </div>
             </div>
           </div>
         </section>

@@ -15,6 +15,24 @@ const SIZE_STEPS = [
   { value: 4, label: '500+', range: '500+' }
 ];
 
+const ETS_MEMBER_KEYS = [
+  "apegga", "atb financial", "atb", "bee-clean", "bee clean", "biamonte", "boyle street",
+  "bryan & company", "bryan and company", "campus tower", "canada place", "commissionaires",
+  "canadian linen", "canterbury", "concordia university", "dentons", "dialog alberta",
+  "dialog architecture", "doubletree", "newcomer centre", "explore edmonton", "emery jamieson",
+  "exciton", "macewan", "greater edmonton", "ikea", "independent advocacy", "fairmont",
+  "hotel macdonald", "kpmg", "quality one", "marriott", "jw marriott", "metropolitan credit",
+  "metterra", "mlt", "nait", "mnp", "norquest", "ogilvie", "peace hills", "reimagine",
+  "reynolds mirth", "sandman", "stantec", "citadel", "brick warehouse", "westin", "vallen",
+  "witten"
+];
+
+function isCurrentMember(name: string): boolean {
+  if (!name) return false;
+  const lower = name.toLowerCase();
+  return ETS_MEMBER_KEYS.some(k => lower.includes(k));
+}
+
 export default function MarketResearchView() {
   const [viewState, setViewState] = useState({
     longitude: -113.4938,
@@ -34,6 +52,7 @@ export default function MarketResearchView() {
   const [excludeHybrid, setExcludeHybrid] = useState(false);
   const [selectedTier, setSelectedTier] = useState<'all' | '1' | '2' | '3'>('all');
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
+  const [showCurrentOnly, setShowCurrentOnly] = useState(false);
   
   // Logarithmic-Snapping Size Slider Indexes (0-4)
   const [minSizeIdx, setMinSizeIdx] = useState(0);
@@ -127,9 +146,12 @@ export default function MarketResearchView() {
       // Suitability tier filter
       if (selectedTier !== 'all' && String(p.tier) !== selectedTier) return false;
 
+      // Current ETS@Work Members filter
+      if (showCurrentOnly && !isCurrentMember(p.name)) return false;
+
       return true;
     });
-  }, [leadsData, searchQuery, minSizeIdx, maxSizeIdx, excludeHybrid, selectedTier]);
+  }, [leadsData, searchQuery, minSizeIdx, maxSizeIdx, excludeHybrid, selectedTier, showCurrentOnly]);
 
   // Convert points to 3D extruded Polygons on-the-fly
   const renderedGeoJSON = useMemo(() => {
@@ -392,7 +414,7 @@ export default function MarketResearchView() {
         </div>
 
         {/* Exclude Hybrid Offices Toggle */}
-        <div className="mb-6 flex items-center justify-between border-t border-white/5 pt-4">
+        <div className="mb-4 flex items-center justify-between border-t border-white/5 pt-4">
           <div className="flex flex-col gap-0.5">
             <span className="text-xs font-bold text-slate-300 font-outfit">Exclude Hybrid Work</span>
             <span className="text-[10px] text-slate-500">Focus on daily commuters</span>
@@ -402,6 +424,23 @@ export default function MarketResearchView() {
               type="checkbox"
               checked={excludeHybrid}
               onChange={(e) => setExcludeHybrid(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-slate-900 rounded-full peer peer-checked:bg-aurora-cyan after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-slate-950"></div>
+          </label>
+        </div>
+
+        {/* Current ETS@Work existing members toggle */}
+        <div className="mb-6 flex items-center justify-between border-t border-white/5 pt-4">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-bold text-slate-300 font-outfit">Current ETS@Work</span>
+            <span className="text-[10px] text-slate-500">Show only existing program members</span>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showCurrentOnly}
+              onChange={(e) => setShowCurrentOnly(e.target.checked)}
               className="sr-only peer"
             />
             <div className="w-9 h-5 bg-slate-900 rounded-full peer peer-checked:bg-aurora-cyan after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-slate-950"></div>

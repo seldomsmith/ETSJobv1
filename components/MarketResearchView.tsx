@@ -355,9 +355,9 @@ export default function MarketResearchView() {
           <div className="flex flex-col gap-1.5">
             {([
               { key: 'all', label: 'All Targets', colorClass: 'bg-slate-400' },
-              { key: '1', label: 'Tier 1 • Prime Targets', colorClass: 'bg-aurora-lime' },
-              { key: '2', label: 'Tier 2 • Good Targets', colorClass: 'bg-yellow-400' },
-              { key: '3', label: 'Tier 3 • Challenging', colorClass: 'bg-aurora-pink' }
+              { key: '1', label: 'Tier 1: Prime ETS@Work Target', colorClass: 'bg-aurora-lime' },
+              { key: '2', label: 'Tier 2: Good ETS@Work Target', colorClass: 'bg-yellow-400' },
+              { key: '3', label: 'Tier 3: Challenging ETS@Work Targets', colorClass: 'bg-aurora-pink' }
             ] as const).map(({ key, label, colorClass }) => (
               <button
                 key={key}

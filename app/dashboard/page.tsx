@@ -393,9 +393,9 @@ export default function LeadDashboard() {
                 className="w-full bg-slate-900/60 border border-white/10 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:border-aurora-cyan/40 focus:ring-0"
               >
                 <option value="all">All Tiers (1 - 3)</option>
-                <option value="1">Tier 1 - Prime Target</option>
-                <option value="2">Tier 2 - Good Target</option>
-                <option value="3">Tier 3 - Challenging Target</option>
+                <option value="1">Tier 1: Prime ETS@Work Target</option>
+                <option value="2">Tier 2: Good ETS@Work Target</option>
+                <option value="3">Tier 3: Challenging ETS@Work Targets</option>
               </select>
             </div>
 

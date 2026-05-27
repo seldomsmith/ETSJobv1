@@ -347,7 +347,9 @@ export default function LeadDashboard() {
                     step="1"
                     value={minSizeIdx}
                     onChange={(e) => setMinSizeIdx(Math.min(parseInt(e.target.value), maxSizeIdx))}
-                    className="absolute pointer-events-none appearance-none bg-transparent w-full h-2 top-0 left-0 z-20 outline-none range-thumb-cyan"
+                    className={`absolute appearance-none bg-transparent w-full h-2 top-0 left-0 outline-none range-thumb-cyan ${
+                      minSizeIdx === maxSizeIdx ? 'z-30' : 'z-20'
+                    }`}
                   />
                   <input
                     type="range"
@@ -356,7 +358,9 @@ export default function LeadDashboard() {
                     step="1"
                     value={maxSizeIdx}
                     onChange={(e) => setMaxSizeIdx(Math.max(parseInt(e.target.value), minSizeIdx))}
-                    className="absolute pointer-events-none appearance-none bg-transparent w-full h-2 top-0 left-0 z-20 outline-none range-thumb-cyan"
+                    className={`absolute appearance-none bg-transparent w-full h-2 top-0 left-0 outline-none range-thumb-cyan ${
+                      minSizeIdx === maxSizeIdx ? 'z-20' : 'z-25'
+                    }`}
                   />
                 </div>
                 <div className="flex justify-between mt-2.5 text-[9px] font-bold text-slate-500 px-0.5 select-none">

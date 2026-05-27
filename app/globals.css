@@ -49,6 +49,16 @@ input[type="range"].range-thumb-cyan {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
+  pointer-events: auto;
+}
+
+input[type="range"].range-thumb-cyan::-webkit-slider-runnable-track {
+  background: transparent;
+  pointer-events: none;
+}
+
+input[type="range"].range-thumb-cyan::-moz-range-track {
+  background: transparent;
   pointer-events: none;
 }
 

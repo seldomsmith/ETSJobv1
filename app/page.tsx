@@ -10,6 +10,6 @@ export default function ScrollytellingPage() {
     <main className="min-h-screen bg-slate-950">
       <Navbar />
       <ScrollytellingView />
-    - </main>
+    </main>
   );
 }

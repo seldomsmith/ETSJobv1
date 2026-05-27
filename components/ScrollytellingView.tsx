@@ -150,7 +150,7 @@ export default function ScrollytellingView() {
           onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)} 
           mapboxAccessToken={MAPBOX_TOKEN} 
           mapStyle={activeTheme === 'light' ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11'} 
-          style={{ width: "100vw", height: "100vh" }}
+          style={{ width: "100%", height: "100%" }}
           interactiveLayerIds={activeChap.id === 'transit-penalty' ? ['penalty-choropleth'] : []}
           onMouseMove={(evt: any) => {
              const feature = evt.features && evt.features[0];

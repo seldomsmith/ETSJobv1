@@ -183,7 +183,7 @@ export default function MarketResearchView() {
         onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)}
         mapboxAccessToken={MAPBOX_TOKEN}
         mapStyle={mapStyle}
-        style={{ width: "100vw", height: "calc(100vh - 76px)" }}
+        style={{ width: "100%", height: "100%" }}
         interactiveLayerIds={['ets-leads-layer']}
         onMouseMove={(evt: any) => {
           const feature = evt.features && evt.features[0];
@@ -309,7 +309,9 @@ export default function MarketResearchView() {
                 step="1"
                 value={minSizeIdx}
                 onChange={handleMinSliderChange}
-                className="absolute pointer-events-none appearance-none bg-transparent w-full h-2 top-0 left-0 z-20 outline-none range-thumb-cyan"
+                className={`absolute appearance-none bg-transparent w-full h-2 top-0 left-0 outline-none range-thumb-cyan ${
+                  minSizeIdx === maxSizeIdx ? 'z-30' : 'z-20'
+                }`}
               />
 
               <input
@@ -319,7 +321,9 @@ export default function MarketResearchView() {
                 step="1"
                 value={maxSizeIdx}
                 onChange={handleMaxSliderChange}
-                className="absolute pointer-events-none appearance-none bg-transparent w-full h-2 top-0 left-0 z-20 outline-none range-thumb-cyan"
+                className={`absolute appearance-none bg-transparent w-full h-2 top-0 left-0 outline-none range-thumb-cyan ${
+                  minSizeIdx === maxSizeIdx ? 'z-20' : 'z-25'
+                }`}
               />
             </div>
 

@@ -142,7 +142,7 @@ def compute_tier_and_scores(row):
     # Balanced Tier classification for actionable B2B targeting
     if (size in ["100-499", "500+"] and transit_score >= 0.4) or (size == "20-99" and transit_score >= 0.7):
         tier = 1 # Prime Target (Large with decent transit, or Mid-sized with superb transit)
-    elif (size in ["100-499", "500+"]) or (size == "20-99" and transit_score >= 0.4) or (size in ["5-9", "10-19"] and transit_score >= 0.7):
+    elif (size in ["100-499", "500+"]) or (size == "20-99" and transit_score >= 0.4) or (size == "10-19" and transit_score >= 0.7):
         tier = 2 # Good Target (Large in transit deserts, Mid-sized with decent transit, or Small/Very Small with superb transit)
     else:
         tier = 3 # Low/Challenging Target (Mostly small/mid businesses in poor transit areas)

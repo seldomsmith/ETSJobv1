@@ -79,5 +79,12 @@ This task list tracks the progress of the ETS@Work prospecting tool upgrades to 
   - [x] **Verify changes**: Conduct full review of layout parameters and class alignment.
   - [x] **Resolve map rendering subset limit**: Remove the 2,500 feature slice limit from `MarketResearchView.tsx` to ensure all 52,027 employers render when "All Targets" is selected.
 
+- [x] **Phase 10: Charts, SVG PNG Export & Global Light Theme**
+  - [x] **Page renaming**: Rename `/dashboard` page title to "ETS@Work Target Page".
+  - [x] **Dynamic Recharts bar chart**: Display dynamic distribution of matched targets (Tier 1, 2, 3) updating in real-time with filters.
+  - [x] **SVG to PNG download utility**: Build SVG-to-Canvas rasterization tool to export dynamic bar charts as PNGs.
+  - [x] **True Light Theme integration**: Configure root `.light` class toggling in `Navbar.tsx` to change body and card variables globally.
+  - [x] **High-contrast light styling**: Add high-contrast white card, input dropdown, and table overrides in `globals.css`.
+
 
 

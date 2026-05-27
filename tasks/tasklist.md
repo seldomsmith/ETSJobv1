@@ -77,6 +77,7 @@ This task list tracks the progress of the ETS@Work prospecting tool upgrades to 
   - [x] **Implement Map container fix**: Remove redundant `h-[calc(100vh-76px)]` class and set to `h-full overflow-hidden` in `components/MarketResearchView.tsx`.
   - [x] **Navbar responsiveness fix**: Update `components/Navbar.tsx` to hide "coming soon" badges on smaller/medium viewports (`hidden lg:flex`).
   - [x] **Verify changes**: Conduct full review of layout parameters and class alignment.
+  - [x] **Resolve map rendering subset limit**: Remove the 2,500 feature slice limit from `MarketResearchView.tsx` to ensure all 52,027 employers render when "All Targets" is selected.
 
 
 

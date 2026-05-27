@@ -131,9 +131,9 @@ export default function MarketResearchView() {
     });
   }, [leadsData, searchQuery, minSizeIdx, maxSizeIdx, excludeHybrid, selectedTier]);
 
-  // Convert points to 3D extruded Polygons on-the-fly (limited to 2500 for performance)
+  // Convert points to 3D extruded Polygons on-the-fly
   const renderedGeoJSON = useMemo(() => {
-    const subset = filteredFeatures.slice(0, 2500).map((f: any) => {
+    const subset = filteredFeatures.map((f: any) => {
       const [lon, lat] = f.geometry.coordinates;
       const size = f.properties.size;
 
@@ -409,7 +409,7 @@ export default function MarketResearchView() {
             />
           </div>
           <span className="text-[9px] text-slate-500 block mt-1.5">
-            * Displaying top 2,500 active features on map for 60fps
+            * Rendering all matched active features on map
           </span>
         </div>
 

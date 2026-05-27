@@ -25,10 +25,25 @@ export default function ScrollytellingView() {
   const [showAggregate, setShowAggregate] = useState(false);
   const [isNarrativeCollapsed, setIsNarrativeCollapsed] = useState(false);
   const [activePeriod, setActivePeriod] = useState<'weekday' | 'midday' | 'weekend'>('weekday');
+  const [activeTheme, setActiveTheme] = useState('dark');
   const animFrameRef = useRef<number | null>(null);
   const progressRef = useRef<number>(0);
   const animCompletedRef = useRef<boolean>(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Sync theme selection on mount and custom events
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('ets-theme') || 'dark';
+    setActiveTheme(savedTheme);
+
+    const handleThemeChange = (e: Event) => {
+      const theme = (e as CustomEvent).detail?.theme || 'dark';
+      setActiveTheme(theme);
+    };
+
+    window.addEventListener('ets-theme-change', handleThemeChange);
+    return () => window.removeEventListener('ets-theme-change', handleThemeChange);
+  }, []);
 
   useEffect(() => {
     fetch('/data/hex_accessibility.geojson')
@@ -134,7 +149,7 @@ export default function ScrollytellingView() {
           {...viewState} 
           onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)} 
           mapboxAccessToken={MAPBOX_TOKEN} 
-          mapStyle="mapbox://styles/mapbox/dark-v11" 
+          mapStyle={activeTheme === 'light' ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11'} 
           style={{ width: "100vw", height: "100vh" }}
           interactiveLayerIds={activeChap.id === 'transit-penalty' ? ['penalty-choropleth'] : []}
           onMouseMove={(evt: any) => {
@@ -149,7 +164,18 @@ export default function ScrollytellingView() {
         >
           <NavigationControl position="top-right" />
           <Source id="routes" type="geojson" data="/data/routes.geojson">
-            <Layer id="routes-layer" type="line" layout={{ visibility: activeChap.layers.includes('routes') ? 'visible' : 'none' }} paint={{ 'line-color': ['match', ['get', 'type'], 'LRT', '#ffd700', 'High-Freq', '#f472b6', 'Local', '#22d3ee', '#22d3ee'], 'line-opacity': 0.8, 'line-width': 1.5 }} />
+            <Layer 
+              id="routes-layer" 
+              type="line" 
+              layout={{ visibility: activeChap.layers.includes('routes') ? 'visible' : 'none' }} 
+              paint={{ 
+                'line-color': activeTheme === 'light' 
+                  ? '#1e3a8a' 
+                  : ['match', ['get', 'type'], 'LRT', '#ffd700', 'High-Freq', '#f472b6', 'Local', '#22d3ee', '#22d3ee'], 
+                'line-opacity': 0.8, 
+                'line-width': 1.5 
+              }} 
+            />
           </Source>
           {hexData && (
             <Source id="hex_accessibility" type="geojson" data={hexData}>

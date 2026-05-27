@@ -44,7 +44,52 @@ body {
   }
 }
 
+/* ⚡ Premium Snapping Dual-Range Slider styles */
+input[type="range"].range-thumb-cyan {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+input[type="range"].range-thumb-cyan::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #22d3ee;
+  border: 2px solid #0f172a;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+  transition: transform 0.1s ease, background-color 0.1s ease;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+input[type="range"].range-thumb-cyan::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: #ffffff;
+}
+
+input[type="range"].range-thumb-cyan::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #22d3ee;
+  border: 2px solid #0f172a;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+  transition: transform 0.1s ease, background-color 0.1s ease;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+input[type="range"].range-thumb-cyan::-moz-range-thumb:hover {
+  transform: scale(1.25);
+  background: #ffffff;
+}
+
 @keyframes pulse {
   0% { transform: scale(1) translate(0, 0); opacity: 0.1; }
   100% { transform: scale(1.2) translate(5%, 5%); opacity: 0.3; }
 }
+

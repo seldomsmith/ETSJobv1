@@ -27,6 +27,7 @@ export default function MarketResearchView() {
 
   const [leadsData, setLeadsData] = useState<any>(null);
   const [hoverInfo, setHoverInfo] = useState<any>(null);
+  const [activeTheme, setActiveTheme] = useState('dark');
   
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,6 +38,20 @@ export default function MarketResearchView() {
   // Logarithmic-Snapping Size Slider Indexes (0-4)
   const [minSizeIdx, setMinSizeIdx] = useState(0);
   const [maxSizeIdx, setMaxSizeIdx] = useState(4);
+
+  // Sync theme selection on mount and custom events
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('ets-theme') || 'dark';
+    setActiveTheme(savedTheme);
+
+    const handleThemeChange = (e: Event) => {
+      const theme = (e as CustomEvent).detail?.theme || 'dark';
+      setActiveTheme(theme);
+    };
+
+    window.addEventListener('ets-theme-change', handleThemeChange);
+    return () => window.removeEventListener('ets-theme-change', handleThemeChange);
+  }, []);
 
   // Load B2B leads on mount
   useEffect(() => {
@@ -148,14 +163,27 @@ export default function MarketResearchView() {
     };
   }, [filteredFeatures]);
 
+  // Dynamic Styles based on Active Theme Mode
+  const mapStyle = activeTheme === 'light' ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11';
+
+  // Navy blue lines on Light Theme, standard Gold/Pink/Cyan on Dark Theme
+  const routeLineColor = activeTheme === 'light' 
+    ? '#1e3a8a' 
+    : ['match', ['get', 'type'], 'LRT', '#ffd700', 'High-Freq', '#f472b6', 'Local', '#22d3ee', '#22d3ee'];
+
+  // Pinch darker colors for pillars on Light Theme for optimal white-ground readability
+  const pillarColor = activeTheme === 'light'
+    ? ['match', ['get', 'tier'], 1, '#16a34a', 2, '#d97706', 3, '#be185d', '#475569']
+    : ['match', ['get', 'tier'], 1, '#4ade80', 2, '#eab308', 3, '#ec4899', '#cbd5e1'];
+
   return (
     <div className="relative w-full flex-1 h-[calc(100vh-76px)]">
       <Map
         {...viewState}
         onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)}
         mapboxAccessToken={MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
-        style={{ width: "100%", height: "100%" }}
+        mapStyle={mapStyle}
+        style={{ width: "100vw", height: "calc(100vh - 76px)" }}
         interactiveLayerIds={['ets-leads-layer']}
         onMouseMove={(evt: any) => {
           const feature = evt.features && evt.features[0];
@@ -175,15 +203,8 @@ export default function MarketResearchView() {
             id="routes-layer"
             type="line"
             paint={{
-              'line-color': [
-                'match',
-                ['get', 'type'],
-                'LRT', '#ffd700',
-                'High-Freq', '#f472b6',
-                'Local', '#22d3ee',
-                '#22d3ee'
-              ],
-              'line-opacity': 0.7,
+              'line-color': routeLineColor,
+              'line-opacity': activeTheme === 'light' ? 0.9 : 0.7,
               'line-width': 2.0
             }}
           />
@@ -196,14 +217,7 @@ export default function MarketResearchView() {
               id="ets-leads-layer"
               type="fill-extrusion"
               paint={{
-                'fill-extrusion-color': [
-                  'match',
-                  ['get', 'tier'],
-                  1, '#4ade80', // Tier 1 Green
-                  2, '#eab308', // Tier 2 Yellow
-                  3, '#ec4899', // Tier 3 Pink
-                  '#cbd5e1'
-                ],
+                'fill-extrusion-color': pillarColor,
                 'fill-extrusion-height': [
                   'match',
                   ['get', 'size'],

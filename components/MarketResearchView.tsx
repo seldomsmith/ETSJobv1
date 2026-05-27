@@ -332,6 +332,10 @@ export default function MarketResearchView() {
               {SIZE_STEPS.map((step) => (
                 <span
                   key={step.value}
+                  onClick={() => {
+                    if (step.value <= maxSizeIdx) setMinSizeIdx(step.value);
+                    else setMaxSizeIdx(step.value);
+                  }}
                   className={`cursor-pointer transition-colors ${
                     step.value >= minSizeIdx && step.value <= maxSizeIdx
                       ? 'text-aurora-cyan font-extrabold'

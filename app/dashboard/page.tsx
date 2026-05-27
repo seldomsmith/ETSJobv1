@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import AccessibilityChart from '@/components/AccessibilityChart';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface LeadProperties {
   name: string;
@@ -156,6 +157,68 @@ export default function LeadDashboard() {
     });
   }, [leadsData, searchQuery, minSizeIdx, maxSizeIdx, selectedTier, hybridStatus, selectedSector]);
 
+  // Count matching businesses in each tier dynamically
+  const tierCounts = useMemo(() => {
+    let t1 = 0;
+    let t2 = 0;
+    let t3 = 0;
+    filteredLeads.forEach((feat) => {
+      const t = feat.properties.tier;
+      if (t === 1) t1++;
+      else if (t === 2) t2++;
+      else if (t === 3) t3++;
+    });
+    return [
+      { name: 'Tier 1: Prime', count: t1, color: '#4ade80' },
+      { name: 'Tier 2: Good', count: t2, color: '#eab308' },
+      { name: 'Tier 3: Challenging', count: t3, color: '#ec4899' }
+    ];
+  }, [filteredLeads]);
+
+  // Convert Bar Chart SVG to Canvas and Download as PNG
+  const handleDownloadChart = () => {
+    const chartContainer = document.getElementById('tier-distribution-chart');
+    if (!chartContainer) return;
+    const svgEl = chartContainer.querySelector('svg');
+    if (!svgEl) return;
+    
+    try {
+      const svgString = new XMLSerializer().serializeToString(svgEl);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const DOMURL = window.URL || window.webkitURL || window;
+      const url = DOMURL.createObjectURL(svgBlob);
+      
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = 2; // Scale for high quality PNG
+        canvas.width = svgEl.clientWidth * scale;
+        canvas.height = svgEl.clientHeight * scale;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        const isLight = document.documentElement.classList.contains('light');
+        ctx.fillStyle = isLight ? '#ffffff' : '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.scale(scale, scale);
+        ctx.drawImage(image, 0, 0);
+        
+        const pngUrl = canvas.toDataURL('image/png');
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pngUrl;
+        downloadLink.download = `ets_work_tier_distribution_${new Date().toISOString().split('T')[0]}.png`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        DOMURL.revokeObjectURL(url);
+      };
+      image.src = url;
+    } catch (error) {
+      console.error('Error exporting bar chart to PNG image:', error);
+    }
+  };
+
   // Sort logic
   const sortedLeads = useMemo(() => {
     const list = [...filteredLeads];
@@ -254,7 +317,7 @@ export default function LeadDashboard() {
               <span className="text-slate-500 font-mono text-xs">YEG Business Census 2026</span>
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight">
-              ETS@Work <span className="aurora-text font-light">Lead Target Finder</span>
+              ETS@Work <span className="aurora-text font-light">Target Page</span>
             </h1>
             <p className="text-slate-400 text-sm max-w-2xl mt-2">
               Explore and filter eligible businesses (5+ employees) to target for transit incentives. Sort by transit scoring and priority layers to optimize outreach campaign yields.
@@ -427,6 +490,72 @@ export default function LeadDashboard() {
                 ))}
               </select>
             </div>
+          </div>
+        </section>
+
+        {/* Dynamic Data Visualizations Section */}
+        <section className="glass-card p-6 mb-8 border border-white/5 flex flex-col gap-6">
+          <div className="flex justify-between items-center pb-3 border-b border-white/5">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-aurora-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Filtered Target Distribution</h3>
+            </div>
+            <button
+              onClick={handleDownloadChart}
+              disabled={loading || sortedLeads.length === 0}
+              className="px-4 py-2 rounded-lg bg-slate-800 border border-white/5 text-[11px] font-bold text-slate-300 hover:text-white hover:border-white/20 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              📥 Download Chart Image
+            </button>
+          </div>
+
+          <div id="tier-distribution-chart" className="w-full h-[280px] bg-slate-900/10 rounded-xl p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={tierCounts}
+                margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
+              >
+                <XAxis 
+                  dataKey="name" 
+                  stroke="#64748b" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={false}
+                />
+                <YAxis 
+                  stroke="#64748b" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="glass-card p-3 shadow-2xl border border-white/10 text-xxs font-outfit">
+                          <span className="font-bold text-white block mb-1">{data.name}</span>
+                          <span className="text-slate-400">Total Matched: </span>
+                          <span className="font-bold text-aurora-cyan font-mono">{data.count.toLocaleString()}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar 
+                  dataKey="count" 
+                  radius={[8, 8, 0, 0]} 
+                  barSize={60}
+                >
+                  {tierCounts.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </section>
 

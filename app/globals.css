@@ -8,6 +8,12 @@
   --background-end-rgb: 2, 6, 23;
 }
 
+.light {
+  --foreground-rgb: 15, 23, 42;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 241, 245, 249;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
@@ -26,6 +32,65 @@ body {
   
   .glass-card:hover {
     @apply border-aurora-cyan/30 shadow-[0_0_30px_rgba(34,211,238,0.1)];
+  }
+
+  /* Light mode component specific overrides */
+  .light .glass-card {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+  }
+
+  .light .glass-card:hover {
+    border-color: rgba(34, 211, 238, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  }
+
+  .light .text-slate-100 {
+    color: #0f172a !important;
+  }
+
+  .light .text-slate-300 {
+    color: #334155 !important;
+  }
+
+  .light .text-slate-400 {
+    color: #475569 !important;
+  }
+
+  .light .text-slate-500 {
+    color: #64748b !important;
+  }
+
+  .light .text-white {
+    color: #0f172a !important;
+  }
+
+  .light input, .light select {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .light input::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  .light th {
+    color: #334155 !important;
+    background-color: rgba(0, 0, 0, 0.03) !important;
+  }
+
+  .light td {
+    border-color: rgba(0, 0, 0, 0.06) !important;
+  }
+
+  .light tr:hover {
+    background-color: rgba(0, 0, 0, 0.015) !important;
+  }
+
+  .light footer {
+    border-color: rgba(0, 0, 0, 0.06) !important;
   }
 
   .aurora-text {

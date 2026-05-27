@@ -12,11 +12,21 @@ export default function Navbar() {
   useEffect(() => {
     const savedTheme = localStorage.getItem('ets-theme') || 'dark';
     setActiveTheme(savedTheme);
+    if (savedTheme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
   }, []);
 
   const handleThemeChange = (theme: 'dark' | 'light') => {
     localStorage.setItem('ets-theme', theme);
     setActiveTheme(theme);
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
     // Fire a custom window event so map pages can listen and switch styles dynamically
     window.dispatchEvent(new CustomEvent('ets-theme-change', { detail: { theme } }));
   };

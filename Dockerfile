@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Copy lockfiles and install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # --- Stage 2: Compile & Build ---
 FROM node:18-alpine AS builder

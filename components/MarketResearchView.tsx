@@ -34,6 +34,54 @@ function isCurrentMember(name: string): boolean {
   return ETS_MEMBER_KEYS.some(k => lower.includes(k));
 }
 
+const MAJOR_STATIONS = [
+  { name: "Churchill LRT Station", coordinates: [-113.4901, 53.5443] },
+  { name: "University LRT Station", coordinates: [-113.5256, 53.5230] },
+  { name: "Southgate LRT Station & Transit Centre", coordinates: [-113.5165, 53.4849] },
+  { name: "Century Park LRT Station & Transit Centre", coordinates: [-113.5164, 53.4599] },
+  { name: "Kingsway/Royal Alex LRT Station", coordinates: [-113.5034, 53.5589] },
+  { name: "Coliseum LRT Station", coordinates: [-113.4673, 53.5719] },
+  { name: "Belvedere LRT Station", coordinates: [-113.4429, 53.5905] },
+  { name: "Clareview LRT Station & Transit Centre", coordinates: [-113.4097, 53.6010] },
+  { name: "Government Centre LRT Station", coordinates: [-113.5063, 53.5357] },
+  { name: "MacEwan LRT Station", coordinates: [-113.5011, 53.5462] },
+  { name: "West Edmonton Mall Transit Centre", coordinates: [-113.6237, 53.5229] },
+  { name: "Mill Woods Transit Centre", coordinates: [-113.4307, 53.4613] }
+];
+
+function findNearestStation(lon: number, lat: number) {
+  let nearest = MAJOR_STATIONS[0];
+  let minDistance = Infinity;
+  for (const station of MAJOR_STATIONS) {
+    const dx = station.coordinates[0] - lon;
+    const dy = station.coordinates[1] - lat;
+    const dist = dx * dx + dy * dy;
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearest = station;
+    }
+  }
+  return nearest;
+}
+
+function createGeoJSONCircle(center: [number, number], radiusInKm: number, steps = 64) {
+  const coords = [];
+  const kmPerDegreeLat = 111.32;
+  const kmPerDegreeLon = 111.32 * Math.cos((center[1] * Math.PI) / 180);
+  
+  const dLat = radiusInKm / kmPerDegreeLat;
+  const dLon = radiusInKm / kmPerDegreeLon;
+  
+  for (let i = 0; i < steps; i++) {
+    const angle = (i * 2 * Math.PI) / steps;
+    const dx = dLon * Math.cos(angle);
+    const dy = dLat * Math.sin(angle);
+    coords.push([center[0] + dx, center[1] + dy]);
+  }
+  coords.push(coords[0]); // close the polygon loop
+  return [coords];
+}
+
 export default function MarketResearchView() {
   const [viewState, setViewState] = useState({
     longitude: -113.4938,
@@ -47,6 +95,7 @@ export default function MarketResearchView() {
   const [leadsData, setLeadsData] = useState<any>(null);
   const [hoverInfo, setHoverInfo] = useState<any>(null);
   const [activeTheme, setActiveTheme] = useState('dark');
+  const [selectedEmployer, setSelectedEmployer] = useState<any>(null);
   
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -156,7 +205,14 @@ export default function MarketResearchView() {
 
   // Convert points to 3D extruded Hexagonal Polygons on-the-fly
   const renderedGeoJSON = useMemo(() => {
-    const subset = filteredFeatures.map((f: any) => {
+    let featuresToRender = filteredFeatures;
+    if (selectedEmployer && selectedEmployer.properties) {
+      featuresToRender = filteredFeatures.filter(
+        (f: any) => f.properties.name === selectedEmployer.properties.name
+      );
+    }
+
+    const subset = featuresToRender.map((f: any) => {
       const [lon, lat] = f.geometry.coordinates;
       const size = f.properties.size;
 
@@ -175,6 +231,11 @@ export default function MarketResearchView() {
 
       return {
         ...f,
+        properties: {
+          ...f.properties,
+          lon,
+          lat
+        },
         geometry: {
           type: 'Polygon',
           coordinates: [hexCoords]
@@ -186,7 +247,106 @@ export default function MarketResearchView() {
       type: 'FeatureCollection',
       features: subset
     };
-  }, [filteredFeatures]);
+  }, [filteredFeatures, selectedEmployer]);
+
+  // Hover under-glow halo GeoJSON
+  const hoverHaloGeoJSON = useMemo(() => {
+    if (!hoverInfo || !hoverInfo.feature) return null;
+    const { lon, lat, tier } = hoverInfo.feature.properties;
+    if (lon === undefined || lat === undefined) return null;
+    return {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [lon, lat]
+        },
+        properties: { tier }
+      }]
+    };
+  }, [hoverInfo]);
+
+  // Concertric accessibility bubbles (gradient opacity circles) GeoJSON
+  const accessibilityBubblesGeoJSON = useMemo(() => {
+    if (!selectedEmployer || !selectedEmployer.properties) return null;
+    const { lon, lat, transit_score } = selectedEmployer.properties;
+    if (lon === undefined || lat === undefined) return null;
+
+    const transitScore = transit_score ?? 0.5;
+    
+    // Scale bubbles by transit access strength up to max of 4.5km
+    const baseRadius15 = 1.5 * transitScore;
+    const baseRadius30 = 3.0 * transitScore;
+    const baseRadius45 = 4.5 * transitScore;
+
+    return {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: createGeoJSONCircle([lon, lat], baseRadius45)
+          },
+          properties: {
+            time: 45,
+            opacity: 0.12,
+            color: '#a855f7' // purple
+          }
+        },
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: createGeoJSONCircle([lon, lat], baseRadius30)
+          },
+          properties: {
+            time: 30,
+            opacity: 0.25,
+            color: '#22d3ee' // cyan
+          }
+        },
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: createGeoJSONCircle([lon, lat], baseRadius15)
+          },
+          properties: {
+            time: 15,
+            opacity: 0.5,
+            color: '#4ade80' // green
+          }
+        }
+      ]
+    };
+  }, [selectedEmployer]);
+
+  // Connection Trace Line GeoJSON to nearest station
+  const connectionLineGeoJSON = useMemo(() => {
+    if (!selectedEmployer || !selectedEmployer.properties) return null;
+    const { lon, lat } = selectedEmployer.properties;
+    if (lon === undefined || lat === undefined) return null;
+
+    const nearest = findNearestStation(lon, lat);
+    return {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [lon, lat],
+            nearest.coordinates
+          ]
+        },
+        properties: {
+          stationName: nearest.name
+        }
+      }]
+    };
+  }, [selectedEmployer]);
 
   // Dynamic Styles based on Active Theme Mode
   const mapStyle = activeTheme === 'light' ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11';
@@ -218,6 +378,14 @@ export default function MarketResearchView() {
         mapStyle={mapStyle}
         style={{ width: "100%", height: "100%" }}
         interactiveLayerIds={['ets-leads-layer']}
+        onClick={(evt: any) => {
+          const feature = evt.features && evt.features[0];
+          if (feature && feature.layer.id === 'ets-leads-layer') {
+            setSelectedEmployer(feature);
+          } else {
+            setSelectedEmployer(null);
+          }
+        }}
         onMouseMove={(evt: any) => {
           const feature = evt.features && evt.features[0];
           if (feature) {
@@ -229,6 +397,79 @@ export default function MarketResearchView() {
         onMouseLeave={() => setHoverInfo(null)}
       >
         <NavigationControl position="top-left" />
+
+        {/* Dynamic 45-Minute Concentric Accessibility Bubbles */}
+        {accessibilityBubblesGeoJSON && (
+          <Source id="accessibility_bubbles" type="geojson" data={accessibilityBubblesGeoJSON}>
+            <Layer
+              id="accessibility-bubbles-layer"
+              type="fill"
+              paint={{
+                'fill-color': ['get', 'color'],
+                'fill-opacity': ['get', 'opacity'],
+                'fill-antialias': true
+              }}
+            />
+            <Layer
+              id="accessibility-bubbles-outline"
+              type="line"
+              paint={{
+                'line-color': ['get', 'color'],
+                'line-width': 1.5,
+                'line-opacity': 0.8
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Hover Under-Glow Radial Halo */}
+        {hoverHaloGeoJSON && (
+          <Source id="hover_halo" type="geojson" data={hoverHaloGeoJSON}>
+            <Layer
+              id="hover-halo-layer"
+              type="circle"
+              paint={{
+                'circle-radius': 22,
+                'circle-color': [
+                  'match',
+                  ['get', 'tier'],
+                  1, '#4ade80',
+                  2, '#eab308',
+                  3, '#ec4899',
+                  '#cbd5e1'
+                ],
+                'circle-opacity': 0.4,
+                'circle-blur': 0.8,
+                'circle-pitch-alignment': 'map'
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Connection Trace Line to Nearest Transit Center / Station */}
+        {connectionLineGeoJSON && (
+          <Source id="connection_line" type="geojson" data={connectionLineGeoJSON}>
+            <Layer
+              id="connection-line-halo"
+              type="line"
+              paint={{
+                'line-color': '#22d3ee',
+                'line-width': 10.0,
+                'line-opacity': 0.35,
+                'line-blur': 3.0
+              }}
+            />
+            <Layer
+              id="connection-line-layer"
+              type="line"
+              paint={{
+                'line-color': '#22d3ee',
+                'line-width': 4.0,
+                'line-opacity': 0.85
+              }}
+            />
+          </Source>
+        )}
 
         {/* Transit Routes Layer */}
         <Source id="routes" type="geojson" data="/data/routes.geojson">
@@ -261,6 +502,14 @@ export default function MarketResearchView() {
                   '500+', 1800,
                   60
                 ],
+                'fill-extrusion-height-transition': {
+                  duration: 1000,
+                  delay: 0
+                },
+                'fill-extrusion-color-transition': {
+                  duration: 800,
+                  delay: 0
+                },
                 'fill-extrusion-opacity': 0.85,
                 'fill-extrusion-base': 0
               }}
@@ -305,6 +554,58 @@ export default function MarketResearchView() {
             <span>Standard SE 3D View</span>
           </button>
         </div>
+
+        {/* Selected Employer Isolated Target Details */}
+        {selectedEmployer && selectedEmployer.properties && (
+          <div className={`mb-5 rounded-xl p-4 border font-outfit transition-all duration-300 ${
+            activeTheme === 'light'
+              ? 'bg-slate-100/80 border-slate-300'
+              : 'bg-slate-950/90 border-aurora-cyan/30'
+          }`}>
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <span className="text-[9px] font-bold text-aurora-cyan uppercase tracking-widest block">Isolated Target Hub</span>
+                <h4 className={`text-xs font-extrabold leading-snug ${activeTheme === 'light' ? 'text-slate-900' : 'text-white'}`}>
+                  {selectedEmployer.properties.name}
+                </h4>
+              </div>
+              <button 
+                onClick={() => setSelectedEmployer(null)} 
+                className={`text-[10px] font-bold transition-all px-2 py-0.5 rounded ${
+                  activeTheme === 'light' 
+                    ? 'text-slate-500 hover:text-slate-900 bg-slate-200 hover:bg-slate-300' 
+                    : 'text-slate-400 hover:text-white bg-white/5 hover:bg-white/10'
+                }`}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="text-[10px] flex flex-col gap-2">
+              <div className={activeTheme === 'light' ? 'text-slate-600' : 'text-slate-400'}>
+                🚇 Nearest Station: <span className={`font-extrabold ${activeTheme === 'light' ? 'text-slate-900' : 'text-white'}`}>
+                  {findNearestStation(selectedEmployer.properties.lon, selectedEmployer.properties.lat).name}
+                </span>
+              </div>
+              <div className="border-t border-white/5 pt-2 mt-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Commute Catchment Gradient</span>
+                <div className="flex flex-col gap-1 text-[9px] font-bold">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded bg-[#4ade80]/50 border border-[#4ade80]" />
+                    <span className={activeTheme === 'light' ? 'text-slate-600' : 'text-slate-300'}>Core Zone (15 mins)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded bg-[#22d3ee]/25 border border-[#22d3ee]" />
+                    <span className={activeTheme === 'light' ? 'text-slate-600' : 'text-slate-300'}>Mid Zone (30 mins)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded bg-[#a855f7]/12 border border-[#a855f7]" />
+                    <span className={activeTheme === 'light' ? 'text-slate-600' : 'text-slate-300'}>Outer Zone (45 mins)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search Employers */}
         <div className="mb-5 relative">

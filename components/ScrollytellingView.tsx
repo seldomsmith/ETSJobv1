@@ -147,7 +147,7 @@ export default function ScrollytellingView() {
       <div className="sticky top-0 h-screen w-full bg-slate-950">
         <Map 
           {...viewState} 
-          onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)} 
+          onMove={(evt: ViewStateChangeEvent) => setViewState(prev => ({ ...prev, ...evt.viewState }))} 
           mapboxAccessToken={MAPBOX_TOKEN} 
           mapStyle={activeTheme === 'light' ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11'} 
           style={{ width: "100%", height: "100%" }}
@@ -171,7 +171,7 @@ export default function ScrollytellingView() {
               paint={{ 
                 'line-color': activeTheme === 'light' 
                   ? '#1e3a8a' 
-                  : ['match', ['get', 'type'], 'LRT', '#ffd700', 'High-Freq', '#f472b6', 'Local', '#22d3ee', '#22d3ee'], 
+                  : ['match', ['get', 'type'], 'LRT', '#ffd700', 'High-Freq', '#f472b6', 'Local', '#22d3ee', '#22d3ee'] as any, 
                 'line-opacity': 0.8, 
                 'line-width': 1.5 
               }} 

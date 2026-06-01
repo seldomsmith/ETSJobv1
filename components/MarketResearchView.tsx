@@ -191,12 +191,12 @@ export default function MarketResearchView() {
   // Navy blue lines on Light Theme, standard Gold/Pink/Cyan on Dark Theme
   const routeLineColor = activeTheme === 'light' 
     ? '#1e3a8a' 
-    : ['match', ['get', 'type'], 'LRT', '#ffd700', 'High-Freq', '#f472b6', 'Local', '#22d3ee', '#22d3ee'];
+    : ['match', ['get', 'type'], 'LRT', '#ffd700', 'High-Freq', '#f472b6', 'Local', '#22d3ee', '#22d3ee'] as any;
 
   // Pinch darker colors for pillars on Light Theme for optimal white-ground readability
   const pillarColor = activeTheme === 'light'
-    ? ['match', ['get', 'tier'], 1, '#16a34a', 2, '#d97706', 3, '#be185d', '#475569']
-    : ['match', ['get', 'tier'], 1, '#4ade80', 2, '#eab308', 3, '#ec4899', '#cbd5e1'];
+    ? ['match', ['get', 'tier'], 1, '#16a34a', 2, '#d97706', 3, '#be185d', '#475569'] as any
+    : ['match', ['get', 'tier'], 1, '#4ade80', 2, '#eab308', 3, '#ec4899', '#cbd5e1'] as any;
 
   return (
     <div className="relative w-full flex-1 h-full overflow-hidden">

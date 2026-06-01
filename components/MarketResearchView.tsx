@@ -202,7 +202,15 @@ export default function MarketResearchView() {
     <div className="relative w-full flex-1 h-full overflow-hidden">
       <Map
         {...viewState}
-        onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)}
+        onMove={(evt: ViewStateChangeEvent) => setViewState({
+          ...evt.viewState,
+          padding: {
+            top: evt.viewState.padding?.top ?? 0,
+            bottom: evt.viewState.padding?.bottom ?? 0,
+            left: evt.viewState.padding?.left ?? 0,
+            right: evt.viewState.padding?.right ?? 0,
+          }
+        })}
         mapboxAccessToken={MAPBOX_TOKEN}
         mapStyle={mapStyle}
         style={{ width: "100%", height: "100%" }}

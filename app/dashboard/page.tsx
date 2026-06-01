@@ -617,8 +617,55 @@ export default function LeadDashboard() {
                 />
                 <Bar 
                   dataKey="count" 
-                  radius={[8, 8, 0, 0]} 
-                  barSize={60}
+                  barSize={70}
+                  shape={(props: any) => {
+                    const { x, y, width, height, fill } = props;
+                    if (!height || height <= 0) return null;
+                    const cx = x + width / 2;
+                    const w = width * 0.75;
+                    const h = height;
+                    const hexTop = y;
+                    const hexBottom = y + h;
+                    const tipH = Math.min(w * 0.35, h * 0.25);
+                    const d = [
+                      `M ${cx} ${hexTop}`,
+                      `L ${cx + w / 2} ${hexTop + tipH}`,
+                      `L ${cx + w / 2} ${hexBottom - tipH}`,
+                      `L ${cx} ${hexBottom}`,
+                      `L ${cx - w / 2} ${hexBottom - tipH}`,
+                      `L ${cx - w / 2} ${hexTop + tipH}`,
+                      `Z`
+                    ].join(' ');
+                    return (
+                      <g>
+                        <defs>
+                          <filter id={`hex-glow-${fill?.replace('#','')}`} x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="4" result="blur" />
+                            <feFlood floodColor={fill} floodOpacity="0.35" result="color" />
+                            <feComposite in="color" in2="blur" operator="in" result="glow" />
+                            <feMerge>
+                              <feMergeNode in="glow" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
+                        </defs>
+                        <path 
+                          d={d} 
+                          fill={fill} 
+                          fillOpacity={0.85} 
+                          stroke={fill} 
+                          strokeWidth={1.5} 
+                          strokeOpacity={0.6}
+                          filter={`url(#hex-glow-${fill?.replace('#','')})`}
+                        />
+                        <path 
+                          d={d} 
+                          fill="url(#hex-sheen)" 
+                          fillOpacity={0.12} 
+                        />
+                      </g>
+                    );
+                  }}
                 >
                   {tierCounts.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />

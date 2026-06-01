@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import AccessibilityChart from '@/components/AccessibilityChart';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ScatterChart, Scatter, ZAxis, ReferenceLine, Label } from 'recharts';
 
 interface LeadProperties {
   name: string;
@@ -180,6 +180,36 @@ export default function LeadDashboard() {
       return true;
     });
   }, [leadsData, searchQuery, minSizeIdx, maxSizeIdx, selectedTier, hybridStatus, selectedSector, showCurrentOnly]);
+
+  // Scatter chart data: sample up to 300 per size category for performance
+  const scatterData = useMemo(() => {
+    const SIZE_X: Record<string, number> = { '5-9': 0, '10-19': 1, '20-99': 2, '100-499': 3, '500+': 4 };
+    const TIER_COLOR: Record<number, string> = { 1: '#4ade80', 2: '#eab308', 3: '#ec4899' };
+    const buckets: Record<string, any[]> = { '5-9': [], '10-19': [], '20-99': [], '100-499': [], '500+': [] };
+    filteredLeads.forEach(f => {
+      const s = f.properties.size;
+      if (buckets[s] && buckets[s].length < 300) {
+        // Small deterministic jitter on X to spread within size band
+        const jitter = (Math.sin(f.properties.lead_score * 997) * 0.3);
+        buckets[s].push({
+          x: (SIZE_X[s] ?? 0) + jitter,
+          y: Math.round(f.properties.transit_score * 100),
+          tier: f.properties.tier,
+          color: TIER_COLOR[f.properties.tier] ?? '#94a3b8',
+          name: f.properties.name,
+          size: s,
+          rawTransit: f.properties.transit_score,
+        });
+      }
+    });
+    const t1: any[] = [], t2: any[] = [], t3: any[] = [];
+    Object.values(buckets).flat().forEach(d => {
+      if (d.tier === 1) t1.push(d);
+      else if (d.tier === 2) t2.push(d);
+      else t3.push(d);
+    });
+    return { t1, t2, t3 };
+  }, [filteredLeads]);
 
   // Count matching businesses in each tier dynamically
   const tierCounts = useMemo(() => {
@@ -596,6 +626,137 @@ export default function LeadDashboard() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </section>
+
+        {/* Transit Score vs Employer Size Scatter Chart */}
+        <section id="transit-size-scatter" className="glass-card p-6 mb-8 border border-white/5">
+          <div className="flex justify-between items-center pb-3 border-b border-white/5 mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-aurora-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Transit Score vs. Employer Size</h3>
+            </div>
+            <button
+              onClick={() => exportSection('transit-size-scatter', 'ets_transit_vs_size')}
+              disabled={loading || filteredLeads.length === 0}
+              className="px-4 py-2 rounded-lg bg-slate-800 border border-white/5 text-[11px] font-bold text-slate-300 hover:text-white hover:border-white/20 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Export Chart
+            </button>
+          </div>
+
+          <p className="text-[11px] text-slate-400 mb-5 max-w-3xl">
+            Each dot represents a matched employer, plotted by transit accessibility score and workforce size category. Reference lines mark the
+            tier threshold boundaries. Employers near or below a threshold line may warrant reclassification review.
+          </p>
+
+          <div className="w-full h-[360px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 20, right: 40, left: 20, bottom: 30 }}>
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  domain={[-0.5, 4.5]}
+                  ticks={[0, 1, 2, 3, 4]}
+                  tickFormatter={(v) => (['5-9', '10-19', '20-99', '100-499', '500+'][Math.round(v)] ?? '')}
+                  stroke="#64748b"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                >
+                  <Label value="Employer Size Category" position="insideBottom" offset={-15} fontSize={11} fill="#64748b" />
+                </XAxis>
+                <YAxis
+                  type="number"
+                  dataKey="y"
+                  domain={[0, 100]}
+                  tickFormatter={(v) => `${v}%`}
+                  stroke="#64748b"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  width={48}
+                >
+                  <Label value="Transit Score" angle={-90} position="insideLeft" offset={10} fontSize={11} fill="#64748b" />
+                </YAxis>
+                <ZAxis range={[18, 18]} />
+                <Tooltip
+                  cursor={false}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const d = payload[0].payload;
+                      return (
+                        <div className="glass-card p-3 shadow-2xl border border-white/10 text-[11px] font-outfit min-w-[200px]">
+                          <span className="font-extrabold text-white block mb-1 truncate">{d.name}</span>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-400">Size:</span>
+                            <span className="font-bold text-white">{d.size}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-400">Transit Score:</span>
+                            <span className="font-bold font-mono" style={{ color: d.color }}>{(d.rawTransit * 100).toFixed(1)}%</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-400">Current Tier:</span>
+                            <span className="font-bold" style={{ color: d.color }}>Tier {d.tier}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                {/* Tier boundary reference lines */}
+                <ReferenceLine y={70} stroke="#22d3ee" strokeDasharray="5 4" strokeWidth={1.5} label={{ value: '70% — Superb transit', position: 'insideTopRight', fontSize: 10, fill: '#22d3ee' }} />
+                <ReferenceLine y={40} stroke="#f59e0b" strokeDasharray="5 4" strokeWidth={1.5} label={{ value: '40% — Decent transit', position: 'insideTopRight', fontSize: 10, fill: '#f59e0b' }} />
+                {/* Scatter series by tier */}
+                <Scatter name="Tier 3" data={scatterData.t3} fill="#ec4899" fillOpacity={0.35} />
+                <Scatter name="Tier 2" data={scatterData.t2} fill="#eab308" fillOpacity={0.55} />
+                <Scatter name="Tier 1" data={scatterData.t1} fill="#4ade80" fillOpacity={0.75} />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Tier threshold breakdown table */}
+          <div className="mt-6 border-t border-white/5 pt-5">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Current Tier Threshold Rules</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px] border-collapse">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left py-2 px-3 text-slate-400 font-bold uppercase tracking-wider w-[120px]">Size Category</th>
+                    <th className="text-center py-2 px-3 font-bold" style={{ color: '#4ade80' }}>Tier 1 Condition</th>
+                    <th className="text-center py-2 px-3 font-bold" style={{ color: '#eab308' }}>Tier 2 Condition</th>
+                    <th className="text-center py-2 px-3 font-bold" style={{ color: '#ec4899' }}>Tier 3 Condition</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { size: '500+ employees', t1: 'Transit ≥ 40%', t2: 'Transit < 40%', t3: '—', note: true },
+                    { size: '100–499 employees', t1: 'Transit ≥ 40%', t2: 'Transit < 40%', t3: '—', note: false },
+                    { size: '20–99 employees', t1: 'Transit ≥ 70%', t2: 'Transit ≥ 40%', t3: 'Transit < 40%', note: false },
+                    { size: '10–19 employees', t1: '—', t2: 'Transit ≥ 70%', t3: 'Transit < 70%', note: false },
+                    { size: '5–9 employees', t1: '—', t2: '—', t3: 'Always Tier 3', note: false },
+                  ].map((row) => (
+                    <tr key={row.size} className={`border-b border-white/5 ${row.note ? 'bg-amber-400/5' : ''}`}>
+                      <td className="py-2.5 px-3 font-bold text-white">
+                        {row.size}
+                        {row.note && <span className="ml-2 text-[9px] bg-amber-400/20 text-amber-400 border border-amber-400/30 px-1.5 py-0.5 rounded font-bold uppercase">Review?</span>}
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono" style={{ color: row.t1 !== '—' ? '#4ade80' : '#334155' }}>{row.t1}</td>
+                      <td className="py-2.5 px-3 text-center font-mono" style={{ color: row.t2 !== '—' ? '#eab308' : '#334155' }}>{row.t2}</td>
+                      <td className="py-2.5 px-3 text-center font-mono" style={{ color: row.t3 !== '—' ? '#ec4899' : '#334155' }}>{row.t3}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-3 leading-relaxed">
+              <span className="text-amber-400 font-bold">Note:</span> The 500+ employee category uses the same 40% transit threshold as 100-499. Given the disproportionate workforce scale
+              (500+ employees represent 50x+ the minimum outreach target), you may wish to lower this threshold to ensure no large employer is
+              excluded from Tier 1 on a marginal transit score difference.
+            </p>
           </div>
         </section>
 

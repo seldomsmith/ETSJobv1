@@ -40,7 +40,7 @@ export default function MarketResearchView() {
     latitude: 53.5461,
     zoom: 11.2,
     pitch: 45,
-    bearing: -10,
+    bearing: 315, // 45 degrees from the South East (pointing North-West)
     padding: { top: 0, bottom: 0, left: 0, right: 0 }
   });
 
@@ -115,7 +115,7 @@ export default function MarketResearchView() {
       latitude: lat,
       zoom: 15.5,
       pitch: 60,
-      bearing: -10,
+      bearing: 315,
       transitionDuration: 1500
     } as any));
   };
@@ -154,7 +154,7 @@ export default function MarketResearchView() {
     });
   }, [leadsData, searchQuery, minSizeIdx, maxSizeIdx, excludeHybrid, selectedTier, showCurrentOnly]);
 
-  // Convert points to 3D extruded Polygons on-the-fly
+  // Convert points to 3D extruded Hexagonal Polygons on-the-fly
   const renderedGeoJSON = useMemo(() => {
     const subset = filteredFeatures.map((f: any) => {
       const [lon, lat] = f.geometry.coordinates;
@@ -163,19 +163,21 @@ export default function MarketResearchView() {
       // Define width base offsets based on size categories
       const offset = size === '500+' ? 0.0006 : size === '100-499' ? 0.0004 : size === '20-99' ? 0.0003 : size === '10-19' ? 0.0002 : 0.00015;
       
-      const polygonCoords = [[
-        [lon - offset, lat - offset],
-        [lon + offset, lat - offset],
-        [lon + offset, lat + offset],
-        [lon - offset, lat + offset],
-        [lon - offset, lat - offset]
-      ]];
+      const hexCoords = [];
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3;
+        // Adjust for latitude distortion at 53.5N so it looks like a regular hexagon
+        const dx = offset * Math.cos(angle) * 1.68;
+        const dy = offset * Math.sin(angle);
+        hexCoords.push([lon + dx, lat + dy]);
+      }
+      hexCoords.push(hexCoords[0]); // close polygon loop
 
       return {
         ...f,
         geometry: {
           type: 'Polygon',
-          coordinates: polygonCoords
+          coordinates: [hexCoords]
         }
       };
     });
@@ -276,6 +278,31 @@ export default function MarketResearchView() {
           </div>
           <button onClick={() => setIsFiltersCollapsed(true)} className="text-slate-500 hover:text-white transition-colors bg-white/5 p-1 rounded">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+
+        {/* Standard SE 3D View Reset Button */}
+        <div className="mb-5">
+          <button
+            onClick={() => setViewState(prev => ({
+              ...prev,
+              longitude: -113.4938,
+              latitude: 53.5461,
+              zoom: 11.2,
+              pitch: 45,
+              bearing: 315,
+              transitionDuration: 1200
+            }))}
+            className={`w-full py-2 px-3 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+              activeTheme === 'light'
+                ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-aurora-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+            </svg>
+            <span>Standard SE 3D View</span>
           </button>
         </div>
 

@@ -1,21 +1,46 @@
-# 🐳 Dockerfile for Next.js app to deploy on Google Cloud Run
-FROM node:18-alpine
+# 🐳 Optimized Multi-Stage Dockerfile for Next.js on Google Cloud Run
 
+# --- Stage 1: Build Dependencies ---
+FROM node:18-alpine AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies first (leverages Docker cache)
+# Copy lockfiles and install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# Copy all local files into the container
+# --- Stage 2: Compile & Build ---
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build your Next.js project
+# Next.js collects completely anonymous telemetry data about general usage.
+# Un-comment the line below to disable telemetry during the build.
+ENV NEXT_TELEMETRY_DISABLED 1
+
 RUN npm run build
 
-# Next.js defaults to port 3000, Cloud Run assigns custom PORT env
-ENV PORT=3000
-EXPOSE 3000
+# --- Stage 3: Production Runner ---
+FROM node:18-alpine AS runner
+WORKDIR /app
 
-# Start Next.js server bound to Cloud Run's dynamic $PORT
-CMD npx next start -p $PORT
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Create non-privileged system user for security
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy static assets and compiled output
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+ENV PORT 8080
+EXPOSE 8080
+
+# Start Next.js stand-alone runner
+CMD ["node", "server.js"]

@@ -1,0 +1,17 @@
+# docker build exclusion rules
+node_modules
+.next
+.git
+.github
+Dockerfile
+.dockerignore
+README.md
+*.ps1
+tasks/
+.devcontainer/
+python/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.db

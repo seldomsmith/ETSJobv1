@@ -35,6 +35,7 @@ export default function Navbar() {
     { href: '/',                  label: 'Transit Map' },
     { href: '/market-research',   label: 'ETS@Work Research' },
     { href: '/dashboard',         label: 'Lead Finder' },
+    { href: '/bus-stops',         label: 'Bus Stops Analysis' },
   ];
 
   const comingSoon = ['Equity Index', 'Reports'];

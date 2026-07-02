@@ -108,18 +108,18 @@ export default function BusStopsMap({ viewMode }: { viewMode: 'proximity' | 'hex
         {/* VIEW 3: Stranded Jobs & 3-Ring Buffer */}
         {viewMode === 'stranded' && (
           <>
-            <Source id="stranded-jobs" type="geojson" data="/data/stranded_jobs.geojson">
+            <Source id="stranded-jobs" type="geojson" data={`/data/stranded_jobs.geojson?v=${Date.now()}`}>
               <Layer 
                 id="stranded-jobs-layer" 
                 type="circle" 
                 paint={{
                   'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 3, 15, 8],
                   'circle-color': [
-                    'match', ['get', 'transit_buffer_score'],
-                    0.5, '#ed8936', // 400-600m
-                    0.1, '#e53e3e', // 600-800m
-                    0.0, '#9b2c2c', // > 800m
-                    '#a0aec0'       // Fallback
+                    'step', ['get', 'transit_buffer_score'],
+                    '#9b2c2c', // < 0.1 (i.e. 0.0, > 800m)
+                    0.1, '#e53e3e', // >= 0.1 (i.e. 600-800m)
+                    0.5, '#ed8936', // >= 0.5 (i.e. 400-600m)
+                    1.0, '#a0aec0'  // >= 1.0 (fallback, shouldn't appear in this dataset)
                   ],
                   'circle-opacity': 0.8,
                   'circle-stroke-width': 1,

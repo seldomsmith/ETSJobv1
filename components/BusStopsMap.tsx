@@ -108,7 +108,7 @@ export default function BusStopsMap({ viewMode }: { viewMode: 'proximity' | 'hex
         {/* VIEW 3: Stranded Jobs & 3-Ring Buffer */}
         {viewMode === 'stranded' && (
           <>
-            <Source id="stranded-jobs" type="geojson" data={`/data/stranded_jobs.geojson?v=2`}>
+            <Source id="stranded-jobs" type="geojson" data={`/data/ets_at_work_leads.geojson`}>
               <Layer 
                 id="stranded-jobs-layer" 
                 type="circle" 

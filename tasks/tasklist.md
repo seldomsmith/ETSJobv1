@@ -93,3 +93,26 @@ This task list tracks the progress of the ETS@Work prospecting tool upgrades to 
   - [ ] Change "Open Prospect finder table" CTA to "Open ETS@Work Targets"
   - [ ] Add high contrast overrides for table rows, headers, and text colors in light mode
   - [ ] Ensure all remaining dark boxes keep white text in light mode
+
+- [x] **Phase 12: Transit Gap Analysis — Bus Stop Proximity & Stranded Jobs**
+  - [x] Create `build_bus_stops.py` to parse GTFS feed and compute jobs within 400m of each stop
+  - [x] Create `build_gap_hexbins.py` for hexagonal grid transit gap scoring
+  - [x] Create `build_gap_isochrones.py` for 3-ring buffer scoring (400m/600m/800m)
+  - [x] Create `scripts/generate-stranded-jobs.mjs` (Node.js equivalent for environments without Python)
+  - [x] Implement employer size weighting (5-9→7, 10-19→15, 20-99→60, 100-499→300, 500+→500)
+  - [x] Build `/bus-stops` page with three view modes:
+    - [x] **Stop Proximity**: Bus stops colored by job density within 400m
+    - [x] **Hexbin Overlay**: Hexagonal grid colored by transit gap score
+    - [x] **Stranded Jobs (3-Rings)**: Individual employer dots scored by nearest stop distance
+  - [x] Add "Bus Stops Analysis" link to Navbar
+  - [x] Debug and resolve blank Stranded Jobs layer (root cause: generated data files not committed to git)
+  - [x] Commit generated data files (`stranded_jobs.geojson`, `stops_with_jobs.geojson`) to repo
+
+- [ ] **Phase 13: On Demand Transit Integration**
+  - [ ] Research Edmonton On Demand transit zones, stop points, and service area boundaries
+  - [ ] Determine data source (GTFS-Flex, City of Edmonton open data, or manual GeoJSON)
+  - [ ] Add On Demand service zones/stops to the Transit Gap Analysis maps
+  - [ ] Re-score stranded jobs accounting for On Demand coverage (jobs within an On Demand zone should not be classified as stranded)
+  - [ ] Update hexbin gap scores to reflect On Demand availability
+  - [ ] Add On Demand layer toggle to the Bus Stops Analysis page UI
+  - [ ] Update legend and tooltips to distinguish fixed-route vs On Demand coverage

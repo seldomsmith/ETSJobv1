@@ -23,11 +23,7 @@ def haversine(lon1, lat1, lon2, lat2):
 
 def build_bus_stops():
     print("Downloading Edmonton GTFS feed...")
-    url = "https://data.edmonton.ca/api/views/kx7y-avp7/files/2f664a85-0552-475f-b52b-f38b1b86c4a6?download=true&filename=ETS_Transit_Data.zip"
-    
-    # Actually just download the direct zip url
-    # "https://data.edmonton.ca/download/kx7y-avp7/application%2Fzip"
-    url = "https://data.edmonton.ca/download/kx7y-avp7/application%2Fzip"
+    url = "https://gtfs.edmonton.ca/TMGTFSRealTimeWebService/GTFS/gtfs.zip"
     
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     try:

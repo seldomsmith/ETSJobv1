@@ -1,0 +1,22 @@
+# Files to exclude when deploying via gcloud run deploy --source .
+.git
+.github
+.devcontainer/
+.tmp-gtfs/
+node_modules/
+.next/
+tasks/
+scripts/
+python/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.py
+*.ps1
+*.db
+README.md
+NEXT_STEPS.md
+TASK_LIST.md
+todo.md
+sync.ps1

@@ -21,6 +21,16 @@ def haversine(lon1, lat1, lon2, lat2):
     
     return R * c
 
+def get_job_count(size_str):
+    mapping = {
+        "5-9": 7,
+        "10-19": 15,
+        "20-99": 60,
+        "100-499": 300,
+        "500+": 500
+    }
+    return mapping.get(size_str, 1)
+
 def build_bus_stops():
     print("Downloading Edmonton GTFS feed...")
     url = "https://gtfs.edmonton.ca/TMGTFSRealTimeWebService/GTFS/gtfs.zip"
@@ -93,7 +103,8 @@ def build_bus_stops():
                 
             dist = haversine(slon, slat, jlon, jlat)
             if dist <= 400:
-                jobs_within_400m += 1
+                size_str = feat.get('properties', {}).get('size', '')
+                jobs_within_400m += get_job_count(size_str)
                 
         stops_geojson["features"].append({
             "type": "Feature",

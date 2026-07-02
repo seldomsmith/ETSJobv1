@@ -16,6 +16,16 @@ def haversine(lon1, lat1, lon2, lat2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+def get_job_count(size_str):
+    mapping = {
+        "5-9": 7,
+        "10-19": 15,
+        "20-99": 60,
+        "100-499": 300,
+        "500+": 500
+    }
+    return mapping.get(size_str, 1)
+
 def build_isochrones():
     print("--- Starting Job Transit Buffer Scoring ---")
     
@@ -45,8 +55,9 @@ def build_isochrones():
     with open(jobs_path, "r", encoding="utf-8") as f:
         jobs_data = json.load(f)
 
-    print("Scoring jobs based on distance to nearest stop...")
+    print("Scoring employer locations based on distance to nearest stop...")
     stranded_jobs = []
+    total_stranded_jobs_count = 0
     
     features = jobs_data.get("features", [])
     for i, feat in enumerate(features):
@@ -79,15 +90,17 @@ def build_isochrones():
         
         if score < 1.0:
             stranded_jobs.append(feat)
+            size_str = feat.get('properties', {}).get('size', '')
+            total_stranded_jobs_count += get_job_count(size_str)
             
         if (i+1) % 1000 == 0:
-            print(f"Processed {i+1}/{len(features)} jobs...")
+            print(f"Processed {i+1}/{len(features)} employer locations...")
 
     out_path = os.path.join("public", "data", "stranded_jobs.geojson")
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump({"type": "FeatureCollection", "features": stranded_jobs}, f)
         
-    print(f"Wrote {len(stranded_jobs)} stranded or underserved jobs to {out_path}.")
+    print(f"Wrote {len(stranded_jobs)} stranded or underserved employer locations (representing approx {total_stranded_jobs_count} total jobs) to {out_path}.")
     print("--- Done ---")
 
 if __name__ == "__main__":

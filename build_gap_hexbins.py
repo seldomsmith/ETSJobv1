@@ -12,9 +12,18 @@ def haversine(lon1, lat1, lon2, lat2):
     a = math.sin(delta_phi / 2.0) ** 2 + \
         math.cos(phi_1) * math.cos(phi_2) * \
         math.sin(delta_lambda / 2.0) ** 2
-    
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
+
+def get_job_count(size_str):
+    mapping = {
+        "5-9": 7,
+        "10-19": 15,
+        "20-99": 60,
+        "100-499": 300,
+        "500+": 500
+    }
+    return mapping.get(size_str, 1)
 
 def generate_hex_polygon(center_lon, center_lat, size_deg):
     """Generate 6 vertices for a flat-topped hexagon."""
@@ -93,7 +102,8 @@ def build_hexbins():
                                 min_dist = dist
                                 best_hex = h
                     if best_hex:
-                        best_hex["jobs"] += 1
+                        size_str = feat.get('properties', {}).get('size', '')
+                        best_hex["jobs"] += get_job_count(size_str)
     else:
         print(f"Warning: {jobs_path} not found.")
 

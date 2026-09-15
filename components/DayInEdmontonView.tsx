@@ -49,14 +49,122 @@ function formatSecondsToClock(totalSeconds: number) {
   };
 }
 
-function getDaylightFactor(tSec: number): number {
-  const h = tSec / 3600.0;
-  if (h >= 7.0 && h <= 19.5) return 1.0;
-  if (h > 19.5 && h <= 21.5) return 1.0 - (h - 19.5) / 2.0;
-  if (h > 21.5 || h < 5.0) return 0.0;
-  if (h >= 5.0 && h < 7.0) return (h - 5.0) / 2.0;
-  return 1.0;
+interface SolarAtmosphere {
+  phaseName: string;
+  darknessOpacity: number;
+  sunGlowOpacity: number;
+  sunDirection: 'east' | 'west' | 'none';
+  sunXRatio: number;
+  headlightIntensity: number;
+  paletteBlend: number;
 }
+
+function getSolarAtmosphere(tSec: number): SolarAtmosphere {
+  const H = (tSec % 86400) / 3600.0;
+
+  if (H < 4.5) {
+    // Deep Night
+    return {
+      phaseName: '🌙 Midnight Starlight',
+      darknessOpacity: 0.78,
+      sunGlowOpacity: 0.0,
+      sunDirection: 'none',
+      sunXRatio: 0.5,
+      headlightIntensity: 1.0,
+      paletteBlend: 1.0
+    };
+  } else if (H < 5.75) {
+    // Astronomical & Nautical Dawn (East light building)
+    const p = (H - 4.5) / 1.25;
+    return {
+      phaseName: '🌅 First Dawn (East)',
+      darknessOpacity: 0.78 - p * 0.35,
+      sunGlowOpacity: p * 0.5,
+      sunDirection: 'east',
+      sunXRatio: 0.95,
+      headlightIntensity: 1.0 - p * 0.3,
+      paletteBlend: 1.0 - p * 0.4
+    };
+  } else if (H < 7.5) {
+    // Sunrise & Golden Hour (Sun rising in East)
+    const p = (H - 5.75) / 1.75;
+    const goldenPeak = Math.max(0, 1.0 - Math.abs(p - 0.4) * 1.8);
+    return {
+      phaseName: '✨ Golden Hour Sunrise (East)',
+      darknessOpacity: (1.0 - p) * 0.43,
+      sunGlowOpacity: goldenPeak * 0.85,
+      sunDirection: 'east',
+      sunXRatio: 0.88,
+      headlightIntensity: Math.max(0, (1.0 - p) * 0.7),
+      paletteBlend: Math.max(0, (1.0 - p) * 0.6)
+    };
+  } else if (H < 18.5) {
+    // Full Daylight
+    return {
+      phaseName: '☀️ Daylight Street Grid',
+      darknessOpacity: 0.0,
+      sunGlowOpacity: 0.0,
+      sunDirection: 'none',
+      sunXRatio: 0.5,
+      headlightIntensity: 0.0,
+      paletteBlend: 0.0
+    };
+  } else if (H < 20.5) {
+    // Sunset & Golden Hour (Sun setting in West)
+    const p = (H - 18.5) / 2.0;
+    const goldenPeak = Math.max(0, 1.0 - Math.abs(p - 0.45) * 1.7);
+    return {
+      phaseName: '🌇 Golden Hour Sunset (West)',
+      darknessOpacity: p * 0.38,
+      sunGlowOpacity: goldenPeak * 0.90,
+      sunDirection: 'west',
+      sunXRatio: 0.12,
+      headlightIntensity: Math.min(1.0, Math.max(0, (p - 0.15) * 1.1)),
+      paletteBlend: p * 0.65
+    };
+  } else if (H < 22.0) {
+    // Dusk to Twilight (West sky darkening into night)
+    const p = (H - 20.5) / 1.5;
+    return {
+      phaseName: '🌆 Twilight & Dusk',
+      darknessOpacity: 0.38 + p * 0.40,
+      sunGlowOpacity: (1.0 - p) * 0.35,
+      sunDirection: 'west',
+      sunXRatio: 0.05,
+      headlightIntensity: 0.85 + p * 0.15,
+      paletteBlend: 0.65 + p * 0.35
+    };
+  } else {
+    // Deep Night
+    return {
+      phaseName: '🌙 Midnight Starlight',
+      darknessOpacity: 0.78,
+      sunGlowOpacity: 0.0,
+      sunDirection: 'none',
+      sunXRatio: 0.5,
+      headlightIntensity: 1.0,
+      paletteBlend: 1.0
+    };
+  }
+}
+
+// Linear RGB interpolation helper
+function lerpColor(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number, t: number): { r: number, g: number, b: number, hex: string } {
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  return { r, g, b, hex };
+}
+
+// Interpolated palette definitions for seamless blending
+const PALETTE_RGB = {
+  0: { day: [15, 23, 42],   night: [56, 189, 248] },  // Bus: Navy -> Sky Cyan
+  1: { day: [16, 185, 129], night: [52, 211, 153] },  // Valley: Emerald -> Neon Green
+  2: { day: [37, 99, 235],  night: [96, 165, 250] },  // Capital: Blue -> Electric Blue
+  3: { day: [239, 68, 68],  night: [248, 113, 113] },  // Metro: Red -> Coral Neon
+  4: { day: [249, 115, 22], night: [251, 146, 60] },  // Regional: Orange -> Golden Orange
+};
 
 const DIRECTOR_HOTSPOTS = [
   { startH: 6.5, endH: 9.5, name: 'Downtown & University Morning Rush', lng: -113.515, lat: 53.535, zoom: 13.5, pitch: 45, bearing: -20 },
@@ -241,15 +349,42 @@ export default function DayInEdmontonView() {
     const dpr = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const daylightFactor = getDaylightFactor(tSec);
-    const isNight = daylightFactor < 0.55;
-    const activePalette = isNight ? CATEGORY_COLORS.night : CATEGORY_COLORS.day;
-
+    const solar = getSolarAtmosphere(tSec);
     const zoom = map.getZoom();
     const zoomScale = Math.max(0.6, Math.min(2.8, (zoom - 8.0) * 0.35 + 0.6));
     const busRadius = 2.4 * zoomScale * dpr;
     const lrtRadius = 3.8 * zoomScale * dpr;
     const regionalRadius = 2.8 * zoomScale * dpr;
+
+    // 1. Directional Solar & Atmospheric Ambient Lighting Pass
+    if (solar.darknessOpacity > 0.01) {
+      // Midnight / Twilight darkness wash
+      ctx.fillStyle = `rgba(15, 23, 42, ${solar.darknessOpacity.toFixed(3)})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    if (solar.sunGlowOpacity > 0.01) {
+      const sunX = canvas.width * solar.sunXRatio;
+      const sunY = canvas.height * 0.42;
+      const sunRad = Math.max(canvas.width, canvas.height) * 0.95;
+
+      const solarGrad = ctx.createRadialGradient(sunX, sunY, 15 * dpr, sunX, sunY, sunRad);
+      if (solar.sunDirection === 'east') {
+        // Sunrise: Warm peach, golden amber, soft dawn pink
+        solarGrad.addColorStop(0, `rgba(255, 225, 140, ${(0.55 * solar.sunGlowOpacity).toFixed(3)})`);
+        solarGrad.addColorStop(0.28, `rgba(251, 146, 60, ${(0.38 * solar.sunGlowOpacity).toFixed(3)})`);
+        solarGrad.addColorStop(0.65, `rgba(244, 114, 182, ${(0.18 * solar.sunGlowOpacity).toFixed(3)})`);
+        solarGrad.addColorStop(1.0, 'rgba(244, 114, 182, 0.0)');
+      } else {
+        // Sunset: Fiery golden-amber, crimson rose, violet twilight
+        solarGrad.addColorStop(0, `rgba(255, 175, 55, ${(0.58 * solar.sunGlowOpacity).toFixed(3)})`);
+        solarGrad.addColorStop(0.32, `rgba(239, 68, 68, ${(0.36 * solar.sunGlowOpacity).toFixed(3)})`);
+        solarGrad.addColorStop(0.72, `rgba(139, 92, 246, ${(0.22 * solar.sunGlowOpacity).toFixed(3)})`);
+        solarGrad.addColorStop(1.0, 'rgba(139, 92, 246, 0.0)');
+      }
+      ctx.fillStyle = solarGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
     const interval = data.interval || 20;
     const tailSteps = Math.ceil(TAIL_DURATION_SEC / interval);
@@ -265,6 +400,7 @@ export default function DayInEdmontonView() {
     const filter = selectedFilter;
     const selectedIdx = selectedVehicle?.index;
 
+    // Director & Chase Camera updates
     if (chaseIndexRef.current !== null && trajectories[chaseIndexRef.current]) {
       const chaseTrip = trajectories[chaseIndexRef.current];
       const s = chaseTrip.s;
@@ -340,9 +476,17 @@ export default function DayInEdmontonView() {
       const startTailIdx = Math.max(0, Math.floor(exactIdx - tailSteps));
       const endTailIdx = Math.min(numPts - 1, Math.floor(exactIdx));
 
-      const style = activePalette[cat as keyof typeof activePalette] || activePalette[0];
-      const strokeBase = style.stroke;
+      // Seamless color interpolation
+      const rgbDef = PALETTE_RGB[cat as keyof typeof PALETTE_RGB] || PALETTE_RGB[0];
+      const colorObj = lerpColor(
+        rgbDef.day[0], rgbDef.day[1], rgbDef.day[2],
+        rgbDef.night[0], rgbDef.night[1], rgbDef.night[2],
+        solar.paletteBlend
+      );
+      const strokeBase = `rgba(${colorObj.r}, ${colorObj.g}, ${colorObj.b}, `;
+      const fillHex = colorObj.hex;
 
+      // 1. Draw Tail Streak
       if (endTailIdx > startTailIdx) {
         ctx.lineWidth = (cat === 1 || cat === 2 || cat === 3 ? 2.8 : 1.6) * zoomScale * dpr;
         ctx.lineCap = 'round';
@@ -365,7 +509,7 @@ export default function DayInEdmontonView() {
 
           const ptTime = s + ptIdx * interval;
           const ageSec = tSec - ptTime;
-          const maxAlpha = isNight ? 0.95 : 0.85;
+          const maxAlpha = 0.85 + solar.paletteBlend * 0.12;
           const alpha = Math.max(0, Math.min(maxAlpha, (1 - (ageSec / TAIL_DURATION_SEC)) * maxAlpha));
 
           ctx.beginPath();
@@ -376,6 +520,7 @@ export default function DayInEdmontonView() {
         }
       }
 
+      // 2. Draw Current Vehicle Head Dot & Gradual Headlight Cones
       if (isCurrentlyActive && exactIdx >= 0 && exactIdx < numPts) {
         const floorIdx = Math.floor(exactIdx);
         const ceilIdx = Math.min(numPts - 1, floorIdx + 1);
@@ -400,14 +545,16 @@ export default function DayInEdmontonView() {
         const pAhead = map.project([pt1[0], pt1[1]]);
         const angle = Math.atan2((pAhead.y - screenPos.y), (pAhead.x - screenPos.x));
 
-        if (isNight) {
+        // Gradual Headlight Cone (illuminates gradually as night approaches)
+        if (solar.headlightIntensity > 0.04) {
           const beamLen = (18 + zoom * 2.2) * dpr;
           const beamHalfAngle = 0.30;
+          const beamAlpha = 0.45 * solar.headlightIntensity;
 
           const grad = ctx.createRadialGradient(sx, sy, 2 * dpr, sx, sy, beamLen);
-          grad.addColorStop(0, 'rgba(255, 255, 230, 0.45)');
-          grad.addColorStop(0.5, 'rgba(255, 255, 200, 0.18)');
-          grad.addColorStop(1, 'rgba(255, 255, 200, 0.0)');
+          grad.addColorStop(0, `rgba(255, 255, 220, ${beamAlpha.toFixed(3)})`);
+          grad.addColorStop(0.5, `rgba(255, 245, 180, ${(beamAlpha * 0.4).toFixed(3)})`);
+          grad.addColorStop(1.0, 'rgba(255, 245, 180, 0.0)');
 
           ctx.beginPath();
           ctx.moveTo(sx, sy);
@@ -417,16 +564,22 @@ export default function DayInEdmontonView() {
           ctx.fill();
         }
 
-        if (isNight || cat === 1 || cat === 2 || cat === 3) {
+        // Glow ring
+        const glowOpacity = Math.max(
+          cat === 1 || cat === 2 || cat === 3 ? 0.28 : 0.0,
+          solar.paletteBlend * 0.38
+        );
+        if (glowOpacity > 0.04) {
           ctx.beginPath();
-          ctx.arc(sx, sy, rad * (isNight ? 2.2 : 1.8), 0, Math.PI * 2);
-          ctx.fillStyle = `${strokeBase}${isNight ? '0.38' : '0.25'})`;
+          ctx.arc(sx, sy, rad * (1.6 + solar.paletteBlend * 0.6), 0, Math.PI * 2);
+          ctx.fillStyle = `${strokeBase}${glowOpacity.toFixed(2)})`;
           ctx.fill();
         }
 
+        // Solid core dot
         ctx.beginPath();
         ctx.arc(sx, sy, rad, 0, Math.PI * 2);
-        ctx.fillStyle = style.fill;
+        ctx.fillStyle = fillHex;
         ctx.fill();
 
         ctx.lineWidth = 1.2 * dpr;
@@ -509,8 +662,8 @@ export default function DayInEdmontonView() {
   };
 
   const clock = useMemo(() => formatSecondsToClock(currentTimeSec), [currentTimeSec]);
-  const daylight = useMemo(() => getDaylightFactor(currentTimeSec), [currentTimeSec]);
-  const isNight = daylight < 0.55;
+  const solar = useMemo(() => getSolarAtmosphere(currentTimeSec), [currentTimeSec]);
+  const isNight = solar.paletteBlend > 0.5;
 
   const selectedTelemetry = useMemo(() => {
     if (!selectedVehicle || !data || !data.routes) return null;
@@ -573,7 +726,7 @@ export default function DayInEdmontonView() {
           handleMapMove();
         }}
         mapboxAccessToken={MAPBOX_TOKEN}
-        mapStyle={isNight ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11'}
+        mapStyle="mapbox://styles/mapbox/light-v11"
         style={{ width: '100%', height: '100%' }}
         minZoom={9.5}
         maxZoom={16.5}
@@ -598,8 +751,8 @@ export default function DayInEdmontonView() {
                 <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
                 <h1 className="text-lg font-black tracking-tight">A ETS Day in Edmonton</h1>
               </div>
-              <p className="text-[11px] font-semibold opacity-60 uppercase tracking-wider">
-                {isNight ? '🌙 Night Glow Telemetry' : '☀️ Daylight Street Grid'}
+              <p className="text-[11px] font-semibold opacity-80 tracking-wide text-amber-500 dark:text-cyan-300">
+                {solar.phaseName}
               </p>
             </div>
             <div className={`flex items-center space-x-1.5 px-3 py-1 rounded-full border ${

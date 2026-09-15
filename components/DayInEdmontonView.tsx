@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import Map, { MapRef, NavigationControl, Layer } from 'react-map-gl/mapbox';
 import { 
   Play, Pause, RotateCcw, Maximize, Minimize, Clock, Bus, Train, 
-  FastForward, Compass, Eye, X, Activity, Gauge, Navigation, Sparkles, Video, Building2, Zap
+  FastForward, Compass, Eye, X, Activity, Gauge, Navigation, Sparkles, Video, Building2, Zap, Film
 } from 'lucide-react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -214,6 +214,15 @@ export default function DayInEdmontonView() {
   chaseIndexRef.current = chaseTripIndex;
   trailStyleRef.current = trailStyle;
 
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [recordProgressPct, setRecordProgressPct] = useState<number>(0);
+  const isRecordingRef = useRef<boolean>(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const recordCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  isRecordingRef.current = isRecording;
+
   const [viewState, setViewState] = useState({
     longitude: -113.4938,
     latitude: 53.5461,
@@ -266,6 +275,89 @@ export default function DayInEdmontonView() {
       document.exitFullscreen().then(() => setIsFullscreen(false)).catch(console.error);
     }
   };
+
+  const startRecording = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    const canvas = canvasRef.current;
+    if (!map || !canvas) return;
+
+    let mimeType = 'video/webm;codecs=vp9';
+    if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
+      mimeType = 'video/mp4;codecs=avc1';
+    } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+      mimeType = 'video/mp4';
+    } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+      mimeType = 'video/webm;codecs=vp9,opus';
+    } else if (MediaRecorder.isTypeSupported('video/webm')) {
+      mimeType = 'video/webm';
+    }
+
+    const recCanvas = document.createElement('canvas');
+    recCanvas.width = canvas.width;
+    recCanvas.height = canvas.height;
+    recordCanvasRef.current = recCanvas;
+
+    const stream = recCanvas.captureStream(60);
+    recordedChunksRef.current = [];
+
+    try {
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 8000000
+      });
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          recordedChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ETS_A_Day_in_Edmonton_Drone.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        setIsRecording(false);
+        recordCanvasRef.current = null;
+      };
+
+      recorder.start(250);
+      mediaRecorderRef.current = recorder;
+
+      setIsRecording(true);
+      setIsDirectorMode(true);
+      setChaseTripIndex(null);
+      setSelectedVehicle(null);
+      currentTimeRef.current = START_TIME_SEC;
+      setCurrentTimeSec(START_TIME_SEC);
+      setIsPlaying(true);
+    } catch (err) {
+      console.error('Failed to start recording:', err);
+      alert('Video recording is not supported in this browser.');
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  const abortRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    recordCanvasRef.current = null;
+  }, []);
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -725,6 +817,32 @@ export default function DayInEdmontonView() {
       }
     }
 
+    // 3. Composite into video stream when Recording Mode is active
+    if (isRecordingRef.current && recordCanvasRef.current) {
+      const recCanvas = recordCanvasRef.current;
+      const recCtx = recCanvas.getContext('2d');
+      const mapCanvas = map.getCanvas();
+      if (recCtx && mapCanvas) {
+        recCtx.clearRect(0, 0, recCanvas.width, recCanvas.height);
+        // Draw Mapbox WebGL Map Base
+        recCtx.drawImage(mapCanvas, 0, 0, recCanvas.width, recCanvas.height);
+        // Draw Transit Simulation Trails & Atmosphere
+        recCtx.drawImage(canvas, 0, 0, recCanvas.width, recCanvas.height);
+
+        // Draw Minimalist HUD Digital Clock directly onto exported video frames
+        const clockData = formatSecondsToClock(tSec);
+        recCtx.save();
+        recCtx.font = `900 ${Math.round(26 * dpr)}px 'Manrope', sans-serif`;
+        recCtx.fillStyle = '#ffffff';
+        recCtx.shadowColor = '#000000';
+        recCtx.shadowBlur = 10 * dpr;
+        recCtx.shadowOffsetX = 3 * dpr;
+        recCtx.shadowOffsetY = 3 * dpr;
+        recCtx.fillText(clockData.timeStr, 35 * dpr, recCanvas.height - (35 * dpr));
+        recCtx.restore();
+      }
+    }
+
     setActiveCounts({
       total: countTotal,
       valley: countValley,
@@ -745,16 +863,28 @@ export default function DayInEdmontonView() {
       const simSpeed = (simSpan / DEFAULT_LOOP_REAL_SEC) * speedMultiplierRef.current;
       const deltaSimSec = (deltaMs / 1000.0) * simSpeed;
       let nextTime = currentTimeRef.current + deltaSimSec;
-      if (nextTime >= maxSimulationSecRef.current) {
-        nextTime = START_TIME_SEC;
+
+      if (isRecordingRef.current) {
+        const pct = Math.round(Math.min(100, Math.max(0, ((nextTime - START_TIME_SEC) / simSpan) * 100)));
+        setRecordProgressPct(pct);
+
+        if (nextTime >= maxSimulationSecRef.current) {
+          stopRecording();
+          nextTime = START_TIME_SEC;
+        }
+      } else {
+        if (nextTime >= maxSimulationSecRef.current) {
+          nextTime = START_TIME_SEC;
+        }
       }
+
       currentTimeRef.current = nextTime;
       setCurrentTimeSec(nextTime);
     }
 
     renderSimulationFrame(currentTimeRef.current);
     animFrameId.current = requestAnimationFrame(animate);
-  }, [renderSimulationFrame]);
+  }, [renderSimulationFrame, stopRecording]);
 
   useEffect(() => {
     lastTimestampRef.current = performance.now();
@@ -855,6 +985,7 @@ export default function DayInEdmontonView() {
         style={{ width: '100%', height: '100%' }}
         minZoom={9.5}
         maxZoom={17.5}
+        preserveDrawingBuffer={true}
       >
         <NavigationControl position="top-right" />
         <Layer
@@ -917,7 +1048,7 @@ export default function DayInEdmontonView() {
         className="absolute inset-0 pointer-events-none z-10"
       />
 
-      {!isFullscreen && (
+      {!isFullscreen && !isRecording && (
         <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-auto">
           <div className="bg-slate-950/95 border-2 border-slate-700 shadow-[5px_5px_0px_0px_#000000] rounded-2xl p-4 min-w-[310px] text-white">
             <div className="flex items-center justify-between pb-3 border-b-2 border-slate-800">
@@ -979,73 +1110,84 @@ export default function DayInEdmontonView() {
         </div>
       )}
 
-      <div className="absolute top-4 right-16 z-20 hidden md:flex items-center gap-2 pointer-events-auto">
-        <button
-          onClick={() => {
-            setTrailStyle((prev) => (prev === 'classic' ? 'streaks' : 'classic'));
-          }}
-          title="Toggle between Classic Particles and Long-Exposure Light Streaks"
-          className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 ${
-            trailStyle === 'streaks'
-              ? 'bg-amber-400 text-slate-950 border-slate-950 shadow-[3px_3px_0px_0px_#000]'
-              : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
-          }`}
-        >
-          <Zap className="w-3.5 h-3.5" />
-          <span>{trailStyle === 'streaks' ? 'Light Streaks' : 'Classic Dots'}</span>
-        </button>
+      {!isRecording && (
+        <div className="absolute top-4 right-16 z-20 hidden md:flex items-center gap-2 pointer-events-auto">
+          <button
+            onClick={startRecording}
+            title="Export high-resolution 60 FPS Drone video starting from 3:30 AM to final run"
+            className="flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white border-red-400 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
+          >
+            <Film className="w-3.5 h-3.5" />
+            <span>Record Video (MP4)</span>
+          </button>
 
-        <button
-          onClick={() => {
-            const next = !show3DBuildings;
-            setShow3DBuildings(next);
-            if (next && viewState.pitch === 0) {
-              setViewState((prev) => ({ ...prev, pitch: 50 }));
-            }
-          }}
-          className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 ${
-            show3DBuildings
-              ? 'bg-blue-600 text-white border-blue-400 shadow-[3px_3px_0px_0px_#000]'
-              : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
-          }`}
-        >
-          <Building2 className="w-3.5 h-3.5" />
-          <span>{show3DBuildings ? '3D Buildings On' : '3D Buildings'}</span>
-        </button>
+          <button
+            onClick={() => {
+              setTrailStyle((prev) => (prev === 'classic' ? 'streaks' : 'classic'));
+            }}
+            title="Toggle between Classic Particles and Long-Exposure Light Streaks"
+            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 ${
+              trailStyle === 'streaks'
+                ? 'bg-amber-400 text-slate-950 border-slate-950 shadow-[3px_3px_0px_0px_#000]'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>{trailStyle === 'streaks' ? 'Light Streaks' : 'Classic Dots'}</span>
+          </button>
 
-        <button
-          onClick={() => {
-            setIsDirectorMode(!isDirectorMode);
-            setChaseTripIndex(null);
-          }}
-          className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 ${
-            isDirectorMode
-              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-400 shadow-[3px_3px_0px_0px_#000] animate-pulse'
-              : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
-          }`}
-        >
-          <Video className="w-3.5 h-3.5" />
-          <span>{isDirectorMode ? 'Drone Orbit Active (60°)' : 'Drone 360° Orbit (60°)'}</span>
-        </button>
+          <button
+            onClick={() => {
+              const next = !show3DBuildings;
+              setShow3DBuildings(next);
+              if (next && viewState.pitch === 0) {
+                setViewState((prev) => ({ ...prev, pitch: 50 }));
+              }
+            }}
+            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 ${
+              show3DBuildings
+                ? 'bg-blue-600 text-white border-blue-400 shadow-[3px_3px_0px_0px_#000]'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>{show3DBuildings ? '3D Buildings On' : '3D Buildings'}</span>
+          </button>
 
-        <div className="flex items-center bg-slate-950 border-2 border-slate-700 shadow-[4px_4px_0px_0px_#000] rounded-xl p-1 gap-1">
-          {(['all', 'lrt', 'bus', 'regional'] as const).map((filterKey) => (
-            <button
-              key={filterKey}
-              onClick={() => setSelectedFilter(filterKey)}
-              className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all capitalize ${
-                selectedFilter === filterKey
-                  ? 'bg-cyan-400 text-slate-950 border-2 border-slate-950 shadow-[1.5px_1.5px_0px_0px_#000]'
-                  : 'text-slate-300 hover:text-white font-extrabold'
-              }`}
-            >
-              {filterKey === 'all' ? 'All' : filterKey === 'lrt' ? 'LRT Only' : filterKey === 'bus' ? 'Buses' : 'Regional'}
-            </button>
-          ))}
+          <button
+            onClick={() => {
+              setIsDirectorMode(!isDirectorMode);
+              setChaseTripIndex(null);
+            }}
+            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 ${
+              isDirectorMode
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-400 shadow-[3px_3px_0px_0px_#000] animate-pulse'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
+            }`}
+          >
+            <Video className="w-3.5 h-3.5" />
+            <span>{isDirectorMode ? 'Drone Orbit Active (60°)' : 'Drone 360° Orbit (60°)'}</span>
+          </button>
+
+          <div className="flex items-center bg-slate-950 border-2 border-slate-700 shadow-[4px_4px_0px_0px_#000] rounded-xl p-1 gap-1">
+            {(['all', 'lrt', 'bus', 'regional'] as const).map((filterKey) => (
+              <button
+                key={filterKey}
+                onClick={() => setSelectedFilter(filterKey)}
+                className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all capitalize ${
+                  selectedFilter === filterKey
+                    ? 'bg-cyan-400 text-slate-950 border-2 border-slate-950 shadow-[1.5px_1.5px_0px_0px_#000]'
+                    : 'text-slate-300 hover:text-white font-extrabold'
+                }`}
+              >
+                {filterKey === 'all' ? 'All' : filterKey === 'lrt' ? 'LRT Only' : filterKey === 'bus' ? 'Buses' : 'Regional'}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {selectedVehicle && selectedTelemetry && (
+      {!isRecording && selectedVehicle && selectedTelemetry && (
         <div className="absolute top-4 right-4 md:right-4 z-30 w-80 max-w-[90vw] pointer-events-auto">
           <div className="bg-slate-950/95 border-2 border-slate-700 shadow-[6px_6px_0px_0px_#000] rounded-2xl p-4 text-white animate-in fade-in slide-in-from-right-4 duration-200">
             <div className="flex items-start justify-between pb-2.5 border-b-2 border-slate-800">
@@ -1137,81 +1279,125 @@ export default function DayInEdmontonView() {
       )}
 
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20 w-11/12 max-w-4xl pointer-events-auto">
-        <div className="bg-slate-950/95 border-2 border-slate-700 shadow-[6px_6px_0px_0px_#000000] rounded-2xl p-4 md:p-5 flex flex-col gap-3 text-white">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={togglePlayPause}
-                className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl font-black text-sm transition-all border-2 border-slate-950 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px] ${
-                  isPlaying
-                    ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
-                    : 'bg-blue-600 hover:bg-blue-500 text-white'
-                }`}
-              >
-                {isPlaying ? <Pause className="w-4 h-4 fill-slate-950" /> : <Play className="w-4 h-4 fill-white" />}
-                <span>{isPlaying ? 'Pause' : 'Play Simulation'}</span>
-              </button>
+        {isRecording ? (
+          <div className="bg-slate-950/95 border-2 border-red-500 shadow-[6px_6px_0px_0px_#000000] rounded-2xl p-4 md:p-5 flex flex-col gap-3 text-white animate-in fade-in duration-300">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-red-950 border-2 border-red-500 text-red-400 font-black text-xs shadow-[2px_2px_0px_0px_#000]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                  <span>REC {recordProgressPct}%</span>
+                </div>
+                <span className="text-xs font-bold text-slate-400 hidden sm:inline">60° Drone Orbit 4K Video Capture</span>
+              </div>
 
-              <button
-                onClick={handleReset}
-                title="Restart from 3:30 AM"
-                className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex items-center space-x-2 font-mono text-center">
-              <span className="text-xl md:text-2xl font-black tracking-tight text-white">{clock.timeStr}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex items-center bg-slate-900 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] rounded-xl p-1 gap-1">
-                {SPEED_OPTIONS.map(({ label, mult }) => (
-                  <button
-                    key={mult}
-                    onClick={() => setSpeedMultiplier(mult)}
-                    className={`px-2.5 py-1 text-xs font-black rounded-lg transition-all ${
-                      speedMultiplier === mult
-                        ? 'bg-cyan-400 text-slate-950 border-2 border-slate-950 shadow-[1.5px_1.5px_0px_0px_#000]'
-                        : 'text-slate-300 hover:text-white font-extrabold'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="flex items-center space-x-2 font-mono text-center">
+                <span className="text-2xl md:text-3xl font-black tracking-tight text-white">{clock.timeStr}</span>
               </div>
 
               <button
-                onClick={toggleFullscreen}
-                title="Toggle Fullscreen"
-                className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
+                onClick={abortRecording}
+                title="Cancel Video Export"
+                className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] text-xs font-black transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
               >
-                {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                <X className="w-3.5 h-3.5" />
+                <span>Cancel</span>
               </button>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-1.5 pt-1">
-            <input
-              type="range"
-              min={START_TIME_SEC}
-              max={maxSimulationSec}
-              step={20}
-              value={currentTimeSec}
-              onChange={handleScrubberChange}
-              className="w-full h-3 bg-slate-800 border-2 border-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.6)] transition"
-            />
-            <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
-              <span>3:30 AM (Launch)</span>
-              <span>7:00 AM (Morning Rush)</span>
-              <span>12:00 PM (Midday)</span>
-              <span>5:00 PM (Evening Rush)</span>
-              <span>12:00 AM (Midnight)</span>
-              <span>{formatSecondsToClock(maxSimulationSec).simpleTime} (Final Run)</span>
+            <div className="flex flex-col gap-1.5 pt-1">
+              <div className="w-full h-3 bg-slate-900 border-2 border-slate-700 rounded-lg overflow-hidden shadow-[inset_2px_2px_4px_rgba(0,0,0,0.6)]">
+                <div 
+                  className="h-full bg-gradient-to-r from-red-500 via-amber-400 to-cyan-400 transition-all duration-150"
+                  style={{ width: `${recordProgressPct}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
+                <span>3:30 AM (Launch)</span>
+                <span>7:00 AM (Morning Rush)</span>
+                <span>12:00 PM (Midday)</span>
+                <span>5:00 PM (Evening Rush)</span>
+                <span>12:00 AM (Midnight)</span>
+                <span>{formatSecondsToClock(maxSimulationSec).simpleTime} (Final Run)</span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-slate-950/95 border-2 border-slate-700 shadow-[6px_6px_0px_0px_#000000] rounded-2xl p-4 md:p-5 flex flex-col gap-3 text-white">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={togglePlayPause}
+                  className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl font-black text-sm transition-all border-2 border-slate-950 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px] ${
+                    isPlaying
+                      ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white'
+                  }`}
+                >
+                  {isPlaying ? <Pause className="w-4 h-4 fill-slate-950" /> : <Play className="w-4 h-4 fill-white" />}
+                  <span>{isPlaying ? 'Pause' : 'Play Simulation'}</span>
+                </button>
+
+                <button
+                  onClick={handleReset}
+                  title="Restart from 3:30 AM"
+                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex items-center space-x-2 font-mono text-center">
+                <span className="text-xl md:text-2xl font-black tracking-tight text-white">{clock.timeStr}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-slate-900 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] rounded-xl p-1 gap-1">
+                  {SPEED_OPTIONS.map(({ label, mult }) => (
+                    <button
+                      key={mult}
+                      onClick={() => setSpeedMultiplier(mult)}
+                      className={`px-2.5 py-1 text-xs font-black rounded-lg transition-all ${
+                        speedMultiplier === mult
+                          ? 'bg-cyan-400 text-slate-950 border-2 border-slate-950 shadow-[1.5px_1.5px_0px_0px_#000]'
+                          : 'text-slate-300 hover:text-white font-extrabold'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={toggleFullscreen}
+                  title="Toggle Fullscreen"
+                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
+                >
+                  {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5 pt-1">
+              <input
+                type="range"
+                min={START_TIME_SEC}
+                max={maxSimulationSec}
+                step={20}
+                value={currentTimeSec}
+                onChange={handleScrubberChange}
+                className="w-full h-3 bg-slate-800 border-2 border-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.6)] transition"
+              />
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
+                <span>3:30 AM (Launch)</span>
+                <span>7:00 AM (Morning Rush)</span>
+                <span>12:00 PM (Midday)</span>
+                <span>5:00 PM (Evening Rush)</span>
+                <span>12:00 AM (Midnight)</span>
+                <span>{formatSecondsToClock(maxSimulationSec).simpleTime} (Final Run)</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

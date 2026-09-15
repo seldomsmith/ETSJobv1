@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import Map, { MapRef, NavigationControl, Layer } from 'react-map-gl/mapbox';
 import { 
   Play, Pause, RotateCcw, Maximize, Minimize, Clock, Bus, Train, 
-  FastForward, Compass, Eye, X, Activity, Gauge, Navigation, Sparkles, Video, Building2, Zap, Film
+  FastForward, Compass, Eye, X, Activity, Gauge, Navigation, Sparkles, Video, Building2, Zap, Film, ChevronDown
 } from 'lucide-react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -216,12 +216,29 @@ export default function DayInEdmontonView() {
 
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordProgressPct, setRecordProgressPct] = useState<number>(0);
+  const [recordingMode, setRecordingMode] = useState<'drone' | 'birdseye'>('drone');
+  const [showRecordMenu, setShowRecordMenu] = useState<boolean>(false);
+  const recordMenuRef = useRef<HTMLDivElement>(null);
+
   const isRecordingRef = useRef<boolean>(false);
+  const recordingModeRef = useRef<'drone' | 'birdseye'>('drone');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const recordCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   isRecordingRef.current = isRecording;
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (recordMenuRef.current && !recordMenuRef.current.contains(e.target as Node)) {
+        setShowRecordMenu(false);
+      }
+    };
+    if (showRecordMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showRecordMenu]);
 
   const [viewState, setViewState] = useState({
     longitude: -113.4938,
@@ -276,10 +293,14 @@ export default function DayInEdmontonView() {
     }
   };
 
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback((mode: 'drone' | 'birdseye' = 'drone') => {
     const map = mapRef.current?.getMap();
     const canvas = canvasRef.current;
     if (!map || !canvas) return;
+
+    recordingModeRef.current = mode;
+    setRecordingMode(mode);
+    setShowRecordMenu(false);
 
     let mimeType = 'video/webm;codecs=vp9';
     if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
@@ -318,7 +339,8 @@ export default function DayInEdmontonView() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `ETS_A_Day_in_Edmonton_Drone.${ext}`;
+        const modeLabel = recordingModeRef.current === 'birdseye' ? 'BirdsEye' : 'Drone';
+        a.download = `ETS_A_Day_in_Edmonton_${modeLabel}.${ext}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -331,9 +353,28 @@ export default function DayInEdmontonView() {
       mediaRecorderRef.current = recorder;
 
       setIsRecording(true);
-      setIsDirectorMode(true);
       setChaseTripIndex(null);
       setSelectedVehicle(null);
+
+      if (mode === 'drone') {
+        setIsDirectorMode(true);
+      } else {
+        setIsDirectorMode(false);
+        map.jumpTo({
+          center: [-113.4938, 53.5461],
+          zoom: 11.2,
+          pitch: 0,
+          bearing: 0
+        });
+        setViewState({
+          longitude: -113.4938,
+          latitude: 53.5461,
+          zoom: 11.2,
+          pitch: 0,
+          bearing: 0
+        });
+      }
+
       currentTimeRef.current = START_TIME_SEC;
       setCurrentTimeSec(START_TIME_SEC);
       setIsPlaying(true);
@@ -1112,14 +1153,60 @@ export default function DayInEdmontonView() {
 
       {!isRecording && (
         <div className="absolute top-4 right-16 z-20 hidden md:flex items-center gap-2 pointer-events-auto">
-          <button
-            onClick={startRecording}
-            title="Export high-resolution 60 FPS Drone video starting from 3:30 AM to final run"
-            className="flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white border-red-400 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
-          >
-            <Film className="w-3.5 h-3.5" />
-            <span>Record Video (MP4)</span>
-          </button>
+          {/* Record Video Dropdown Menu */}
+          <div className="relative" ref={recordMenuRef}>
+            <button
+              onClick={() => setShowRecordMenu((prev) => !prev)}
+              title="Export high-resolution 60 FPS simulation video"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white border-red-400 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
+            >
+              <Film className="w-3.5 h-3.5" />
+              <span>Record Video</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showRecordMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showRecordMenu && (
+              <div className="absolute right-0 mt-2 w-64 bg-slate-950/98 border-2 border-slate-700 shadow-[6px_6px_0px_0px_#000] rounded-2xl p-2 z-50 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-2 duration-150 text-white">
+                <div className="px-3 py-1.5 text-[10px] uppercase font-black tracking-wider text-slate-400 border-b border-slate-800">
+                  Select Camera Perspective
+                </div>
+
+                <button
+                  onClick={() => startRecording('birdseye')}
+                  className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border-2 border-slate-800 hover:border-cyan-400 transition-all text-left group"
+                >
+                  <div className="p-2 rounded-lg bg-slate-800 group-hover:bg-cyan-400 group-hover:text-slate-950 text-cyan-400 transition-colors">
+                    <Eye className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white group-hover:text-cyan-300 transition-colors">
+                      Bird&apos;s Eye View
+                    </div>
+                    <div className="text-[10px] font-extrabold text-slate-400">
+                      Directly above (top-down static)
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => startRecording('drone')}
+                  className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border-2 border-slate-800 hover:border-rose-400 transition-all text-left group"
+                >
+                  <div className="p-2 rounded-lg bg-slate-800 group-hover:bg-rose-500 group-hover:text-white text-rose-400 transition-colors">
+                    <Video className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white group-hover:text-rose-300 transition-colors">
+                      Drone 360° Orbit
+                    </div>
+                    <div className="text-[10px] font-extrabold text-slate-400">
+                      60° pitch cinematic orbit from South
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => {
@@ -1287,7 +1374,9 @@ export default function DayInEdmontonView() {
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
                   <span>REC {recordProgressPct}%</span>
                 </div>
-                <span className="text-xs font-bold text-slate-400 hidden sm:inline">60° Drone Orbit 4K Video Capture</span>
+                <span className="text-xs font-bold text-slate-400 hidden sm:inline">
+                  {recordingMode === 'birdseye' ? "Bird's Eye (Top-Down) 60 FPS Capture" : '60° Drone Orbit 60 FPS Capture'}
+                </span>
               </div>
 
               <div className="flex items-center space-x-2 font-mono text-center">

@@ -707,6 +707,27 @@ export default function DayInEdmontonView() {
         maxZoom={17.5}
       >
         <NavigationControl position="top-right" />
+        <Layer
+          id="custom-water-fill"
+          source="composite"
+          source-layer="water"
+          type="fill"
+          paint={{
+            'fill-color': '#c6e2ff',
+            'fill-opacity': 0.85
+          }}
+        />
+        <Layer
+          id="custom-waterway-lines"
+          source="composite"
+          source-layer="waterway"
+          type="line"
+          paint={{
+            'line-color': '#b8dcfe',
+            'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 14, 3],
+            'line-opacity': 0.85
+          }}
+        />
         {show3DBuildings && (
           <Layer
             id="3d-buildings-extrusion"

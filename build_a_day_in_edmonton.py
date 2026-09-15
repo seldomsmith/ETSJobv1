@@ -1,4 +1,4 @@
-﻿"""
+"""
 build_a_day_in_edmonton.py
 ---------------------------
 Parses Edmonton Transit GTFS schedule for a full Wednesday (24 hours),
@@ -61,21 +61,28 @@ def haversine_m(lat1, lon1, lat2, lon2):
 
 def get_route_info(route_id, route_short, route_long, route_type):
     rid = route_id.strip()
+    rtype = str(route_type).strip()
     rshort = (route_short or "").strip()
     rlong = (route_long or "").strip()
     rshort_lower = rshort.lower()
     rlong_lower = rlong.lower()
 
-    if rid == "023R" or "valley" in rshort_lower or "valley" in rlong_lower:
+    # Strictly classify LRT routes (route_type 0 and matching exact line names)
+    if rid == "023R" or (rtype == "0" and (rshort_lower == "valley" or rlong_lower == "valley line")):
         return 1, "Valley Line LRT", "Bombardier Flexity Freedom (2-Car Train)"
-    if rid == "021R" or "capital" in rshort_lower or "capital" in rlong_lower:
+    if rid == "021R" or (rtype == "0" and (rshort_lower == "capital" or rlong_lower == "capital line")):
         return 2, "Capital Line LRT", "Siemens SD-160 / U2 (5-Car High-Floor Train)"
-    if rid == "022R" or "metro" in rshort_lower or "metro" in rlong_lower:
+    if rid == "022R" or (rtype == "0" and (rshort_lower == "metro" or rlong_lower == "metro line")):
         return 3, "Metro Line LRT", "Siemens SD-160 (3-Car High-Floor Train)"
+    
+    # Regional routes
     if rid in ["540", "560", "747"] or rid.startswith("F") or "regional" in rlong_lower or "airport" in rlong_lower:
         return 4, f"Regional Express {rshort}", "Grande West Vicinity / Nova LFS Regional Coach"
+    
+    # Exclude DATS and on-demand
     if "dats" in rlong_lower or "on demand" in rlong_lower or "ondemand" in rlong_lower:
         return -1, "", ""
+        
     return 0, f"Route {rshort}", "ETS 40ft Clean Diesel / Hybrid Low-Floor Bus"
 
 def build_simulation():

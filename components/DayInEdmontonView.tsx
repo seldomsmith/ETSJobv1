@@ -706,12 +706,13 @@ export default function DayInEdmontonView() {
         className="absolute inset-0 pointer-events-none z-10"
       />
 
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-auto">
-        <div className={`backdrop-blur-md border shadow-2xl rounded-2xl p-4 min-w-[290px] transition-all duration-500 ${
-          isNight 
-            ? 'bg-slate-900/90 border-slate-800 text-white' 
-            : 'bg-white/95 border-slate-200/90 text-slate-900'
-        }`}>
+      {!isFullscreen && (
+        <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-auto">
+          <div className={`backdrop-blur-md border shadow-2xl rounded-2xl p-4 min-w-[290px] transition-all duration-500 ${
+            isNight 
+              ? 'bg-slate-900/90 border-slate-800 text-white' 
+              : 'bg-white/95 border-slate-200/90 text-slate-900'
+          }`}>
           <div className="flex items-center justify-between pb-2 border-b border-white/10">
             <div>
               <div className="flex items-center space-x-1.5">
@@ -778,7 +779,7 @@ export default function DayInEdmontonView() {
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="absolute top-4 right-16 z-20 hidden md:flex items-center gap-2 pointer-events-auto">
         <button

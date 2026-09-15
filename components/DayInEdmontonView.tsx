@@ -812,7 +812,8 @@ export default function DayInEdmontonView() {
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       <div className="absolute top-4 right-16 z-20 hidden md:flex items-center gap-2 pointer-events-auto">
         <button

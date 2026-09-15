@@ -1,4 +1,20 @@
-﻿import os
+﻿"""
+build_a_day_in_edmonton.py
+---------------------------
+Parses Edmonton Transit GTFS schedule for a full Wednesday (24 hours),
+interpolates vehicle positions every 20 seconds along actual shape geometries,
+and exports an ultra-lean trajectory JSON dataset with route, headsign, stop milestones,
+and vehicle hardware type classifications to public/data/ets_day_simulation.json.
+
+Category IDs:
+  0: Bus (Navy Blue #0F172A / Night Cyan-Blue)
+  1: Valley Line LRT (Green #10B981)
+  2: Capital Line LRT (Blue #2563EB)
+  3: Metro Line LRT (Red #EF4444)
+  4: Regional Routes (Orange #F97316)
+"""
+
+import os
 import io
 import csv
 import math
@@ -43,22 +59,24 @@ def haversine_m(lat1, lon1, lat2, lon2):
     c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
     return R * c
 
-def get_route_category(route_id, route_short, route_long, route_type):
+def get_route_info(route_id, route_short, route_long, route_type):
     rid = route_id.strip()
-    rshort = (route_short or "").strip().lower()
-    rlong = (route_long or "").strip().lower()
+    rshort = (route_short or "").strip()
+    rlong = (route_long or "").strip()
+    rshort_lower = rshort.lower()
+    rlong_lower = rlong.lower()
 
-    if rid == "023R" or "valley" in rshort or "valley" in rlong:
-        return 1
-    if rid == "021R" or "capital" in rshort or "capital" in rlong:
-        return 2
-    if rid == "022R" or "metro" in rshort or "metro" in rlong:
-        return 3
-    if rid in ["540", "560", "747"] or rid.startswith("F") or "regional" in rlong or "airport" in rlong:
-        return 4
-    if "dats" in rlong or "on demand" in rlong or "ondemand" in rlong:
-        return -1
-    return 0
+    if rid == "023R" or "valley" in rshort_lower or "valley" in rlong_lower:
+        return 1, "Valley Line LRT", "Bombardier Flexity Freedom (2-Car Train)"
+    if rid == "021R" or "capital" in rshort_lower or "capital" in rlong_lower:
+        return 2, "Capital Line LRT", "Siemens SD-160 / U2 (5-Car High-Floor Train)"
+    if rid == "022R" or "metro" in rshort_lower or "metro" in rlong_lower:
+        return 3, "Metro Line LRT", "Siemens SD-160 (3-Car High-Floor Train)"
+    if rid in ["540", "560", "747"] or rid.startswith("F") or "regional" in rlong_lower or "airport" in rlong_lower:
+        return 4, f"Regional Express {rshort}", "Grande West Vicinity / Nova LFS Regional Coach"
+    if "dats" in rlong_lower or "on demand" in rlong_lower or "ondemand" in rlong_lower:
+        return -1, "", ""
+    return 0, f"Route {rshort}", "ETS 40ft Clean Diesel / Hybrid Low-Floor Bus"
 
 def build_simulation():
     ensure_gtfs()
@@ -88,11 +106,13 @@ def build_simulation():
         print("Parsing routes.txt...")
         routes = {}
         for r in csv.DictReader(io.StringIO(z.open("routes.txt").read().decode("utf-8-sig"))):
-            cat = get_route_category(r["route_id"], r.get("route_short_name", ""), r.get("route_long_name", ""), r.get("route_type", ""))
+            cat, line_title, vtype = get_route_info(r["route_id"], r.get("route_short_name", ""), r.get("route_long_name", ""), r.get("route_type", ""))
             routes[r["route_id"]] = {
-                "category": cat,
-                "short_name": r.get("route_short_name", ""),
-                "long_name": r.get("route_long_name", "")
+                "cat": cat,
+                "short": r.get("route_short_name", ""),
+                "long": r.get("route_long_name", ""),
+                "title": line_title,
+                "vtype": vtype
             }
 
         print("Parsing trips.txt...")
@@ -100,20 +120,23 @@ def build_simulation():
         for r in csv.DictReader(io.StringIO(z.open("trips.txt").read().decode("utf-8-sig"))):
             if r["service_id"] in active_services:
                 route_id = r["route_id"]
-                cat = routes.get(route_id, {}).get("category", 0)
+                rdata = routes.get(route_id, {})
+                cat = rdata.get("cat", 0)
                 if cat != -1:
                     wed_trips[r["trip_id"]] = {
                         "route_id": route_id,
                         "shape_id": r.get("shape_id", ""),
-                        "category": cat,
+                        "cat": cat,
                         "headsign": r.get("trip_headsign", "")
                     }
         print(f"Total active Wednesday trips to process: {len(wed_trips)}")
 
         print("Parsing stops.txt...")
         stops = {}
+        stop_names = {}
         for r in csv.DictReader(io.StringIO(z.open("stops.txt").read().decode("utf-8-sig"))):
             stops[r["stop_id"]] = (float(r["stop_lat"]), float(r["stop_lon"]))
+            stop_names[r["stop_id"]] = r.get("stop_name", "").strip()
 
         print("Parsing shapes.txt...")
         shapes_raw = defaultdict(list)
@@ -141,7 +164,7 @@ def build_simulation():
                 "cum_dist": cum_dist,
                 "total_dist": total
             }
-        print(f"Indexed {len(shapes)} shapes with cumulative distance metrics.")
+        print(f"Indexed {len(shapes)} shapes.")
 
         print("Parsing stop_times.txt for active trips...")
         trip_stop_times = defaultdict(list)
@@ -168,9 +191,10 @@ def build_simulation():
             continue
         stop_list.sort(key=lambda x: x[0])
         trip_meta = wed_trips[trip_id]
-        cat = trip_meta["category"]
+        cat = trip_meta["cat"]
         shape_id = trip_meta["shape_id"]
         shape_data = shapes.get(shape_id)
+        route_id = trip_meta["route_id"]
 
         first_dep = stop_list[0][2]
         last_arr = stop_list[-1][1]
@@ -182,10 +206,13 @@ def build_simulation():
         end_tick = math.ceil(last_arr / SAMPLE_INTERVAL) * SAMPLE_INTERVAL
 
         milestones = []
+        stop_schedule = []
         for seq, arr_s, dep_s, stop_id in stop_list:
             if stop_id in stops:
                 lat, lon = stops[stop_id]
+                sname = stop_names.get(stop_id, f"Stop {stop_id}")
                 milestones.append((arr_s, dep_s, lat, lon))
+                stop_schedule.append((arr_s, sname))
         
         if len(milestones) < 2:
             continue
@@ -263,10 +290,21 @@ def build_simulation():
             sampled_points.append([round(lon, 5), round(lat, 5)])
 
         if len(sampled_points) > 1:
+            # Subsample stops schedule to key milestones to keep JSON lightweight
+            # (e.g. up to 10 milestone stops evenly spaced)
+            if len(stop_schedule) > 12:
+                step = len(stop_schedule) // 10
+                compact_stops = [stop_schedule[0]] + [stop_schedule[i] for i in range(step, len(stop_schedule) - 1, step)] + [stop_schedule[-1]]
+            else:
+                compact_stops = stop_schedule
+
             trajectories.append({
                 "c": cat,
+                "r": route_id,
+                "h": trip_meta["headsign"] or routes.get(route_id, {}).get("long", ""),
                 "s": start_tick,
-                "pts": sampled_points
+                "pts": sampled_points,
+                "st": compact_stops
             })
             category_counts[cat] += 1
 
@@ -283,6 +321,7 @@ def build_simulation():
         "date": best_date,
         "day": "Wednesday",
         "totalTrips": len(trajectories),
+        "routes": routes,
         "trajectories": trajectories
     }
 

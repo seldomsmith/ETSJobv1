@@ -11,27 +11,127 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = "pk.eyJ1Ijoic2VsZG9tc21pdGgiLCJhIjoiY21tdGY5bGxjMXg4YzJzb21mOTY4aTB2cyJ9.cLdZbTpTPB5196GaD7Vo-Q";
 
-const CATEGORY_COLORS = {
-  day: {
-    0: { stroke: 'rgba(15, 23, 42, ', fill: '#0f172a', label: 'City Bus' },
-    1: { stroke: 'rgba(16, 185, 129, ', fill: '#10b981', label: 'Valley Line LRT' },
-    2: { stroke: 'rgba(37, 99, 235, ', fill: '#2563eb', label: 'Capital Line LRT' },
-    3: { stroke: 'rgba(239, 68, 68, ', fill: '#ef4444', label: 'Metro Line LRT' },
-    4: { stroke: 'rgba(249, 115, 22, ', fill: '#f97316', label: 'Regional Bus' }
-  },
-  night: {
-    0: { stroke: 'rgba(56, 189, 248, ', fill: '#38bdf8', label: 'City Bus' },
-    1: { stroke: 'rgba(52, 211, 153, ', fill: '#34d399', label: 'Valley Line LRT' },
-    2: { stroke: 'rgba(96, 165, 250, ', fill: '#60a5fa', label: 'Capital Line LRT' },
-    3: { stroke: 'rgba(248, 113, 113, ', fill: '#f87171', label: 'Metro Line LRT' },
-    4: { stroke: 'rgba(251, 146, 60, ', fill: '#fb923c', label: 'Regional Bus' }
-  }
-};
-
 const DURATION_24H_SEC = 86400;
 const DEFAULT_LOOP_REAL_SEC = 60;
 const SIM_SPEED_BASE = DURATION_24H_SEC / DEFAULT_LOOP_REAL_SEC;
 const TAIL_DURATION_SEC = 300;
+const START_TIME_SEC = 12600; // 3:30 AM
+
+const SPEED_OPTIONS = [
+  { label: 'Very Slow', mult: 0.25 },
+  { label: 'Slow', mult: 0.5 },
+  { label: 'Medium', mult: 1.0 },
+  { label: 'Fast', mult: 2.0 },
+  { label: 'Insane Speed', mult: 4.0 }
+];
+
+interface SolarAtmosphere {
+  phaseName: string;
+  darknessOpacity: number;
+  sunGlowOpacity: number;
+  sunDirection: 'east' | 'west' | 'none';
+  sunXRatio: number;
+  headlightIntensity: number;
+  paletteBlend: number;
+}
+
+function getSolarAtmosphere(tSec: number): SolarAtmosphere {
+  const H = (tSec % 86400) / 3600.0;
+
+  if (H < 4.5) {
+    return {
+      phaseName: '🌙 Midnight Starlight',
+      darknessOpacity: 0.78,
+      sunGlowOpacity: 0.0,
+      sunDirection: 'none',
+      sunXRatio: 0.5,
+      headlightIntensity: 1.0,
+      paletteBlend: 1.0
+    };
+  } else if (H < 5.75) {
+    const p = (H - 4.5) / 1.25;
+    return {
+      phaseName: '🌅 First Dawn (East)',
+      darknessOpacity: 0.78 - p * 0.35,
+      sunGlowOpacity: p * 0.5,
+      sunDirection: 'east',
+      sunXRatio: 0.95,
+      headlightIntensity: 1.0 - p * 0.3,
+      paletteBlend: 1.0 - p * 0.4
+    };
+  } else if (H < 7.5) {
+    const p = (H - 5.75) / 1.75;
+    const goldenPeak = Math.max(0, 1.0 - Math.abs(p - 0.4) * 1.8);
+    return {
+      phaseName: '✨ Golden Hour Sunrise (East)',
+      darknessOpacity: (1.0 - p) * 0.43,
+      sunGlowOpacity: goldenPeak * 0.85,
+      sunDirection: 'east',
+      sunXRatio: 0.88,
+      headlightIntensity: Math.max(0, (1.0 - p) * 0.7),
+      paletteBlend: Math.max(0, (1.0 - p) * 0.6)
+    };
+  } else if (H < 18.5) {
+    return {
+      phaseName: '☀️ Daylight Street Grid',
+      darknessOpacity: 0.0,
+      sunGlowOpacity: 0.0,
+      sunDirection: 'none',
+      sunXRatio: 0.5,
+      headlightIntensity: 0.0,
+      paletteBlend: 0.0
+    };
+  } else if (H < 20.5) {
+    const p = (H - 18.5) / 2.0;
+    const goldenPeak = Math.max(0, 1.0 - Math.abs(p - 0.45) * 1.7);
+    return {
+      phaseName: '🌇 Golden Hour Sunset (West)',
+      darknessOpacity: p * 0.38,
+      sunGlowOpacity: goldenPeak * 0.90,
+      sunDirection: 'west',
+      sunXRatio: 0.12,
+      headlightIntensity: Math.min(1.0, Math.max(0, (p - 0.15) * 1.1)),
+      paletteBlend: p * 0.65
+    };
+  } else if (H < 22.0) {
+    const p = (H - 20.5) / 1.5;
+    return {
+      phaseName: '🌆 Twilight & Dusk',
+      darknessOpacity: 0.38 + p * 0.40,
+      sunGlowOpacity: (1.0 - p) * 0.35,
+      sunDirection: 'west',
+      sunXRatio: 0.05,
+      headlightIntensity: 0.85 + p * 0.15,
+      paletteBlend: 0.65 + p * 0.35
+    };
+  } else {
+    return {
+      phaseName: '🌙 Midnight Starlight',
+      darknessOpacity: 0.78,
+      sunGlowOpacity: 0.0,
+      sunDirection: 'none',
+      sunXRatio: 0.5,
+      headlightIntensity: 1.0,
+      paletteBlend: 1.0
+    };
+  }
+}
+
+function lerpColor(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number, t: number) {
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  return { r, g, b, hex };
+}
+
+const PALETTE_RGB = {
+  0: { day: [15, 23, 42],   night: [56, 189, 248] },  // Bus
+  1: { day: [16, 185, 129], night: [52, 211, 153] },  // Valley Line
+  2: { day: [37, 99, 235],  night: [96, 165, 250] },  // Capital Line
+  3: { day: [239, 68, 68],  night: [248, 113, 113] },  // Metro Line
+  4: { day: [249, 115, 22], night: [251, 146, 60] },  // Regional
+};
 
 function formatSecondsToClock(totalSeconds: number) {
   const clamped = Math.max(0, Math.min(86399, Math.floor(totalSeconds)));
@@ -48,140 +148,6 @@ function formatSecondsToClock(totalSeconds: number) {
     h, m, s, period
   };
 }
-
-interface SolarAtmosphere {
-  phaseName: string;
-  darknessOpacity: number;
-  sunGlowOpacity: number;
-  sunDirection: 'east' | 'west' | 'none';
-  sunXRatio: number;
-  headlightIntensity: number;
-  paletteBlend: number;
-}
-
-function getSolarAtmosphere(tSec: number): SolarAtmosphere {
-  const H = (tSec % 86400) / 3600.0;
-
-  if (H < 4.5) {
-    // Deep Night
-    return {
-      phaseName: '🌙 Midnight Starlight',
-      darknessOpacity: 0.78,
-      sunGlowOpacity: 0.0,
-      sunDirection: 'none',
-      sunXRatio: 0.5,
-      headlightIntensity: 1.0,
-      paletteBlend: 1.0
-    };
-  } else if (H < 5.75) {
-    // Astronomical & Nautical Dawn (East light building)
-    const p = (H - 4.5) / 1.25;
-    return {
-      phaseName: '🌅 First Dawn (East)',
-      darknessOpacity: 0.78 - p * 0.35,
-      sunGlowOpacity: p * 0.5,
-      sunDirection: 'east',
-      sunXRatio: 0.95,
-      headlightIntensity: 1.0 - p * 0.3,
-      paletteBlend: 1.0 - p * 0.4
-    };
-  } else if (H < 7.5) {
-    // Sunrise & Golden Hour (Sun rising in East)
-    const p = (H - 5.75) / 1.75;
-    const goldenPeak = Math.max(0, 1.0 - Math.abs(p - 0.4) * 1.8);
-    return {
-      phaseName: '✨ Golden Hour Sunrise (East)',
-      darknessOpacity: (1.0 - p) * 0.43,
-      sunGlowOpacity: goldenPeak * 0.85,
-      sunDirection: 'east',
-      sunXRatio: 0.88,
-      headlightIntensity: Math.max(0, (1.0 - p) * 0.7),
-      paletteBlend: Math.max(0, (1.0 - p) * 0.6)
-    };
-  } else if (H < 18.5) {
-    // Full Daylight
-    return {
-      phaseName: '☀️ Daylight Street Grid',
-      darknessOpacity: 0.0,
-      sunGlowOpacity: 0.0,
-      sunDirection: 'none',
-      sunXRatio: 0.5,
-      headlightIntensity: 0.0,
-      paletteBlend: 0.0
-    };
-  } else if (H < 20.5) {
-    // Sunset & Golden Hour (Sun setting in West)
-    const p = (H - 18.5) / 2.0;
-    const goldenPeak = Math.max(0, 1.0 - Math.abs(p - 0.45) * 1.7);
-    return {
-      phaseName: '🌇 Golden Hour Sunset (West)',
-      darknessOpacity: p * 0.38,
-      sunGlowOpacity: goldenPeak * 0.90,
-      sunDirection: 'west',
-      sunXRatio: 0.12,
-      headlightIntensity: Math.min(1.0, Math.max(0, (p - 0.15) * 1.1)),
-      paletteBlend: p * 0.65
-    };
-  } else if (H < 22.0) {
-    // Dusk to Twilight (West sky darkening into night)
-    const p = (H - 20.5) / 1.5;
-    return {
-      phaseName: '🌆 Twilight & Dusk',
-      darknessOpacity: 0.38 + p * 0.40,
-      sunGlowOpacity: (1.0 - p) * 0.35,
-      sunDirection: 'west',
-      sunXRatio: 0.05,
-      headlightIntensity: 0.85 + p * 0.15,
-      paletteBlend: 0.65 + p * 0.35
-    };
-  } else {
-    // Deep Night
-    return {
-      phaseName: '🌙 Midnight Starlight',
-      darknessOpacity: 0.78,
-      sunGlowOpacity: 0.0,
-      sunDirection: 'none',
-      sunXRatio: 0.5,
-      headlightIntensity: 1.0,
-      paletteBlend: 1.0
-    };
-  }
-}
-
-// Linear RGB interpolation helper
-function lerpColor(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number, t: number): { r: number, g: number, b: number, hex: string } {
-  const r = Math.round(r1 + (r2 - r1) * t);
-  const g = Math.round(g1 + (g2 - g1) * t);
-  const b = Math.round(b1 + (b2 - b1) * t);
-  const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-  return { r, g, b, hex };
-}
-
-// Interpolated palette definitions for seamless blending
-const PALETTE_RGB = {
-  0: { day: [15, 23, 42],   night: [56, 189, 248] },  // Bus: Navy -> Sky Cyan
-  1: { day: [16, 185, 129], night: [52, 211, 153] },  // Valley: Emerald -> Neon Green
-  2: { day: [37, 99, 235],  night: [96, 165, 250] },  // Capital: Blue -> Electric Blue
-  3: { day: [239, 68, 68],  night: [248, 113, 113] },  // Metro: Red -> Coral Neon
-  4: { day: [249, 115, 22], night: [251, 146, 60] },  // Regional: Orange -> Golden Orange
-};
-
-const DIRECTOR_HOTSPOTS = [
-  { startH: 6.5, endH: 9.5, name: 'Downtown & University Morning Rush', lng: -113.515, lat: 53.535, zoom: 13.5, pitch: 45, bearing: -20 },
-  { startH: 9.5, endH: 14.5, name: 'Central High-Frequency Grid', lng: -113.498, lat: 53.546, zoom: 13.8, pitch: 48, bearing: 15 },
-  { startH: 14.5, endH: 18.5, name: 'South Campus & Mill Woods Evening Rush', lng: -113.505, lat: 53.490, zoom: 13.2, pitch: 45, bearing: -30 },
-  { startH: 18.5, endH: 23.9, name: 'Whyte & Jasper Evening Corridors', lng: -113.500, lat: 53.530, zoom: 14.0, pitch: 50, bearing: 45 },
-  { startH: 0.0, endH: 6.5, name: 'Citywide Night Network', lng: -113.4938, lat: 53.5461, zoom: 11.5, pitch: 35, bearing: 0 }
-];
-
-const START_TIME_SEC = 12600; // 3:30 AM
-const SPEED_OPTIONS = [
-  { label: 'Very Slow', mult: 0.25 },
-  { label: 'Slow', mult: 0.5 },
-  { label: 'Medium', mult: 1.0 },
-  { label: 'Fast', mult: 2.0 },
-  { label: 'Insane Speed', mult: 4.0 }
-];
 
 export default function DayInEdmontonView() {
   const mapRef = useRef<MapRef>(null);
@@ -358,7 +324,6 @@ export default function DayInEdmontonView() {
 
     // 1. Directional Solar & Atmospheric Ambient Lighting Pass
     if (solar.darknessOpacity > 0.01) {
-      // Midnight / Twilight darkness wash
       ctx.fillStyle = `rgba(15, 23, 42, ${solar.darknessOpacity.toFixed(3)})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
@@ -370,13 +335,11 @@ export default function DayInEdmontonView() {
 
       const solarGrad = ctx.createRadialGradient(sunX, sunY, 15 * dpr, sunX, sunY, sunRad);
       if (solar.sunDirection === 'east') {
-        // Sunrise: Warm peach, golden amber, soft dawn pink
         solarGrad.addColorStop(0, `rgba(255, 225, 140, ${(0.55 * solar.sunGlowOpacity).toFixed(3)})`);
         solarGrad.addColorStop(0.28, `rgba(251, 146, 60, ${(0.38 * solar.sunGlowOpacity).toFixed(3)})`);
         solarGrad.addColorStop(0.65, `rgba(244, 114, 182, ${(0.18 * solar.sunGlowOpacity).toFixed(3)})`);
         solarGrad.addColorStop(1.0, 'rgba(244, 114, 182, 0.0)');
       } else {
-        // Sunset: Fiery golden-amber, crimson rose, violet twilight
         solarGrad.addColorStop(0, `rgba(255, 175, 55, ${(0.58 * solar.sunGlowOpacity).toFixed(3)})`);
         solarGrad.addColorStop(0.32, `rgba(239, 68, 68, ${(0.36 * solar.sunGlowOpacity).toFixed(3)})`);
         solarGrad.addColorStop(0.72, `rgba(139, 92, 246, ${(0.22 * solar.sunGlowOpacity).toFixed(3)})`);
@@ -430,12 +393,13 @@ export default function DayInEdmontonView() {
           bearing: bearing,
           duration: 30
         });
+      } else {
+        setChaseTripIndex(null);
+      }
     } else if (isDirectorRef.current) {
-      // Cinematic Drone Orbit tracking along Anthony Henday ring looking inwards at 60° pitch
-      const orbitSpeedFactor = 2.0; // 2 complete panoramic rotations across 24h
+      const orbitSpeedFactor = 2.0;
       const orbitAngle = (tSec / 86400.0) * Math.PI * 2 * orbitSpeedFactor;
       
-      // Gentle breathing focal shift around central core
       const focalLng = -113.4938 + Math.cos(orbitAngle) * 0.015;
       const focalLat = 53.5461 + Math.sin(orbitAngle) * 0.010;
       const droneBearing = (orbitAngle * 180.0 / Math.PI) % 360;
@@ -480,7 +444,6 @@ export default function DayInEdmontonView() {
       const startTailIdx = Math.max(0, Math.floor(exactIdx - tailSteps));
       const endTailIdx = Math.min(numPts - 1, Math.floor(exactIdx));
 
-      // Seamless color interpolation
       const rgbDef = PALETTE_RGB[cat as keyof typeof PALETTE_RGB] || PALETTE_RGB[0];
       const colorObj = lerpColor(
         rgbDef.day[0], rgbDef.day[1], rgbDef.day[2],
@@ -549,7 +512,7 @@ export default function DayInEdmontonView() {
         const pAhead = map.project([pt1[0], pt1[1]]);
         const angle = Math.atan2((pAhead.y - screenPos.y), (pAhead.x - screenPos.x));
 
-        // Gradual Headlight Cone (illuminates gradually as night approaches)
+        // Gradual Headlight Cone
         if (solar.headlightIntensity > 0.04) {
           const beamLen = (18 + zoom * 2.2) * dpr;
           const beamHalfAngle = 0.30;

@@ -233,11 +233,15 @@ def build_simulation():
             for arr_s, dep_s, slat, slon in milestones:
                 best_idx = curr_idx
                 best_d = float("inf")
-                for s_i in range(curr_idx, min(len(shape_coords), curr_idx + 150)):
+                # Search forward along the full shape polyline (never capped)
+                for s_i in range(curr_idx, len(shape_coords)):
                     d = haversine_m(slat, slon, shape_coords[s_i][0], shape_coords[s_i][1])
                     if d < best_d:
                         best_d = d
                         best_idx = s_i
+                    elif d > best_d + 800 and s_i > curr_idx + 20:
+                        # Local minimum passed with safe buffer
+                        pass
                 curr_idx = best_idx
                 shape_milestones.append((arr_s, dep_s, shape_cum[best_idx]))
             shape_mapped = True

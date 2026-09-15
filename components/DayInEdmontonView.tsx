@@ -66,6 +66,15 @@ const DIRECTOR_HOTSPOTS = [
   { startH: 0.0, endH: 6.5, name: 'Citywide Night Network', lng: -113.4938, lat: 53.5461, zoom: 11.5, pitch: 35, bearing: 0 }
 ];
 
+const START_TIME_SEC = 12600; // 3:30 AM
+const SPEED_OPTIONS = [
+  { label: 'Very Slow', mult: 0.25 },
+  { label: 'Slow', mult: 0.5 },
+  { label: 'Medium', mult: 1.0 },
+  { label: 'Fast', mult: 2.0 },
+  { label: 'Insane Speed', mult: 4.0 }
+];
+
 export default function DayInEdmontonView() {
   const mapRef = useRef<MapRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,7 +85,7 @@ export default function DayInEdmontonView() {
   const [loadingProgress, setLoadingProgress] = useState<string>('Downloading 24-hour simulation telemetry...');
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentTimeSec, setCurrentTimeSec] = useState<number>(60);
+  const [currentTimeSec, setCurrentTimeSec] = useState<number>(START_TIME_SEC);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.0);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'lrt' | 'bus' | 'regional'>('all');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -97,7 +106,7 @@ export default function DayInEdmontonView() {
 
   const animFrameId = useRef<number | null>(null);
   const lastTimestampRef = useRef<number | null>(null);
-  const currentTimeRef = useRef<number>(60);
+  const currentTimeRef = useRef<number>(START_TIME_SEC);
   const isPlayingRef = useRef<boolean>(false);
   const speedMultiplierRef = useRef<number>(1.0);
   const isDirectorRef = useRef<boolean>(false);
@@ -460,7 +469,7 @@ export default function DayInEdmontonView() {
       const deltaSimSec = (deltaMs / 1000.0) * SIM_SPEED_BASE * speedMultiplierRef.current;
       let nextTime = currentTimeRef.current + deltaSimSec;
       if (nextTime >= DURATION_24H_SEC) {
-        nextTime = 60;
+        nextTime = START_TIME_SEC;
       }
       currentTimeRef.current = nextTime;
       setCurrentTimeSec(nextTime);
@@ -487,9 +496,9 @@ export default function DayInEdmontonView() {
   };
 
   const handleReset = () => {
-    currentTimeRef.current = 60;
-    setCurrentTimeSec(60);
-    renderSimulationFrame(60);
+    currentTimeRef.current = START_TIME_SEC;
+    setCurrentTimeSec(START_TIME_SEC);
+    renderSimulationFrame(START_TIME_SEC);
   };
 
   const handleScrubberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -801,7 +810,7 @@ export default function DayInEdmontonView() {
 
               <button
                 onClick={handleReset}
-                title="Restart from 12:01 AM"
+                title="Restart from 3:30 AM"
                 className={`p-2.5 rounded-xl transition ${
                   isNight ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                 }`}
@@ -818,17 +827,17 @@ export default function DayInEdmontonView() {
               <div className={`flex items-center border rounded-xl p-0.5 ${
                 isNight ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'
               }`}>
-                {[0.5, 1.0, 2.0, 4.0].map((s) => (
+                {SPEED_OPTIONS.map(({ label, mult }) => (
                   <button
-                    key={s}
-                    onClick={() => setSpeedMultiplier(s)}
+                    key={mult}
+                    onClick={() => setSpeedMultiplier(mult)}
                     className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
-                      speedMultiplier === s
+                      speedMultiplier === mult
                         ? isNight ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-white text-blue-700 shadow-sm font-black'
                         : isNight ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    {s}x
+                    {label}
                   </button>
                 ))}
               </div>
@@ -848,7 +857,7 @@ export default function DayInEdmontonView() {
           <div className="flex flex-col gap-1">
             <input
               type="range"
-              min={60}
+              min={START_TIME_SEC}
               max={86340}
               step={20}
               value={currentTimeSec}
@@ -856,7 +865,7 @@ export default function DayInEdmontonView() {
               className="w-full h-2.5 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-700 transition"
             />
             <div className="flex justify-between text-[11px] font-bold opacity-50 px-0.5">
-              <span>12:01 AM (Night Glow)</span>
+              <span>3:30 AM (Early Launch)</span>
               <span>7:00 AM (Morning Rush)</span>
               <span>12:00 PM (Midday)</span>
               <span>5:00 PM (Evening Rush)</span>

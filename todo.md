@@ -52,3 +52,15 @@ The main objective of integrating the **Edmonton Business Census CSV (52,522 row
 - Run the Next.js development server locally (`npm run dev`) to explore the interface.
 - Navigate to `/scrollytelling` to explore spatial distributions.
 - Navigate to `/dashboard` to filter and export customized cold outreach CSV sheets.
+- Navigate to `/a-day-in-edmonton` to experience the 24-hour ETS motion simulation.
+
+---
+
+### 4. A ETS Day in Edmonton — 24-Hour Transit Motion Simulation (`app/a-day-in-edmonton`)
+- **Data Generator (`build_a_day_in_edmonton.py`)**: Interpolated 12,697 Wednesday GTFS trips at 20-second coordinate increments across 24 hours (12:01 AM to 11:59 PM) into `public/data/ets_day_simulation.json`.
+- **Renderer (`components/DayInEdmontonView.tsx`)**: High-performance Canvas overlay synchronized with Mapbox light minimalist grid map:
+  - **Fading Motion Tails**: 5-minute historical streaks fading from 85% opacity down to 0% at 5 minutes old.
+  - **Zoom-Responsive Dot Scaling**: Radii dynamically scale between zoom 9 and 16.5 so macro views stay clutter-free and local street corridors pop.
+  - **Mode Categorization**: Valley Line LRT (Green), Capital Line LRT (Blue), Metro Line LRT (Red), Regional Routes (Orange), City Buses (Dark Navy).
+  - **Interactive Playback**: Play/Pause starting in paused state, 24h timeline scrubber, 0.5x/1x/2x/4x speed multipliers, digital AM/PM clock HUD, live vehicle count breakdown, and fullscreen toggle.
+

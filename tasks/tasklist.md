@@ -108,11 +108,11 @@ This task list tracks the progress of the ETS@Work prospecting tool upgrades to 
   - [x] Debug and resolve blank Stranded Jobs layer (root cause: generated data files not committed to git)
   - [x] Commit generated data files (`stranded_jobs.geojson`, `stops_with_jobs.geojson`) to repo
 
-- [ ] **Phase 13: On Demand Transit Integration**
-  - [ ] Research Edmonton On Demand transit zones, stop points, and service area boundaries
-  - [ ] Determine data source (GTFS-Flex, City of Edmonton open data, or manual GeoJSON)
-  - [ ] Add On Demand service zones/stops to the Transit Gap Analysis maps
-  - [ ] Re-score stranded jobs accounting for On Demand coverage (jobs within an On Demand zone should not be classified as stranded)
-  - [ ] Update hexbin gap scores to reflect On Demand availability
-  - [ ] Add On Demand layer toggle to the Bus Stops Analysis page UI
-  - [ ] Update legend and tooltips to distinguish fixed-route vs On Demand coverage
+- [x] **Phase 14: A ETS Day in Edmonton — 24-Hour Transit Motion Simulation**
+  - [x] Create `build_a_day_in_edmonton.py` GTFS Wednesday schedule interpolation pipeline
+  - [x] Generate optimized coordinate time-series `public/data/ets_day_simulation.json` (12,697 active vehicle trips)
+  - [x] Create `components/DayInEdmontonView.tsx` with high-performance Canvas layer, zoom scaling, 5-min tails, and controls
+  - [x] Create `app/a-day-in-edmonton/page.tsx`
+  - [x] Update `components/Navbar.tsx` to include "A ETS Day in Edmonton" link
+  - [x] Verify 60 FPS playback, tail fading, dot zoom scaling, and responsive controls
+

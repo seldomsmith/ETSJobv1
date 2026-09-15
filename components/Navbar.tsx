@@ -33,6 +33,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/',                  label: 'Transit Map' },
+    { href: '/a-day-in-edmonton', label: 'A ETS Day in Edmonton' },
     { href: '/market-research',   label: 'ETS@Work Research' },
     { href: '/dashboard',         label: 'Lead Finder' },
     { href: '/bus-stops',         label: 'Bus Stops Analysis' },

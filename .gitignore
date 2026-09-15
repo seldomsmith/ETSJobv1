@@ -46,3 +46,7 @@ env/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# GTFS temporary download cache
+.tmp-gtfs/
+

@@ -398,16 +398,22 @@ export default function DayInEdmontonView() {
         setChaseTripIndex(null);
       }
     } else if (isDirectorRef.current) {
+      const simProgress = Math.max(0, (tSec - START_TIME_SEC) / (86400 - START_TIME_SEC));
       const orbitSpeedFactor = 2.0;
-      const orbitAngle = (tSec / 86400.0) * Math.PI * 2 * orbitSpeedFactor;
+      const orbitAngle = simProgress * Math.PI * 2 * orbitSpeedFactor;
       
-      const focalLng = -113.4938 + Math.cos(orbitAngle) * 0.015;
-      const focalLat = 53.5461 + Math.sin(orbitAngle) * 0.010;
-      const droneBearing = (orbitAngle * 180.0 / Math.PI) % 360;
+      // Starts at South Henday looking directly North into Edmonton Core (bearing 0°)
+      const coreLng = -113.4938;
+      const coreLat = 53.5461;
+      const radiusLng = 0.085;
+      const radiusLat = 0.058;
+      const droneLng = coreLng + Math.sin(orbitAngle) * radiusLng;
+      const droneLat = coreLat - Math.cos(orbitAngle) * radiusLat;
+      const droneBearing = ((orbitAngle * 180.0) / Math.PI) % 360;
 
       map.easeTo({
-        center: [focalLng, focalLat],
-        zoom: 11.6,
+        center: [droneLng, droneLat],
+        zoom: 11.5,
         pitch: 60,
         bearing: droneBearing,
         duration: 35

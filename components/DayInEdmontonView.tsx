@@ -682,13 +682,14 @@ export default function DayInEdmontonView() {
     <div 
       ref={containerRef}
       onClick={handleCanvasClick}
-      className="relative w-full h-[calc(100vh-76px)] bg-slate-950 overflow-hidden select-none font-sans"
+      style={{ fontFamily: "'Manrope', sans-serif" }}
+      className="relative w-full h-[calc(100vh-76px)] bg-slate-950 overflow-hidden select-none"
     >
       {loading && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md">
-          <div className="w-12 h-12 border-4 border-slate-700 border-t-cyan-400 rounded-full animate-spin mb-4" />
-          <h3 className="text-xl font-bold text-white mb-1">A ETS Day in Edmonton</h3>
-          <p className="text-sm text-cyan-300 animate-pulse">{loadingProgress}</p>
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md">
+          <div className="w-12 h-12 border-4 border-slate-800 border-t-cyan-400 rounded-full animate-spin mb-4" />
+          <h3 className="text-xl font-black text-white mb-1 tracking-tight">A ETS Day in Edmonton</h3>
+          <p className="text-xs font-bold uppercase tracking-widest text-cyan-400 animate-pulse">{loadingProgress}</p>
         </div>
       )}
 
@@ -747,79 +748,65 @@ export default function DayInEdmontonView() {
 
       {!isFullscreen && (
         <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-auto">
-          <div className={`backdrop-blur-md border shadow-2xl rounded-2xl p-4 min-w-[290px] transition-all duration-500 ${
-            isNight 
-              ? 'bg-slate-900/90 border-slate-800 text-white' 
-              : 'bg-white/95 border-slate-200/90 text-slate-900'
-          }`}>
-          <div className="flex items-center justify-between pb-2 border-b border-white/10">
-            <div>
-              <div className="flex items-center space-x-1.5">
-                <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
-                <h1 className="text-lg font-black tracking-tight">A ETS Day in Edmonton</h1>
+          <div className="bg-slate-950/95 border-2 border-slate-700 shadow-[5px_5px_0px_0px_#000000] rounded-2xl p-4 min-w-[310px] text-white">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-slate-800">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
+                  <h1 className="text-base font-black tracking-tight uppercase">A ETS Day in Edmonton</h1>
+                </div>
+                <p className="text-[11px] font-extrabold tracking-wide text-amber-400 mt-0.5">
+                  {solar.phaseName}
+                </p>
               </div>
-              <p className="text-[11px] font-semibold opacity-80 tracking-wide text-amber-500 dark:text-cyan-300">
-                {solar.phaseName}
-              </p>
+              <div className="flex items-center space-x-1.5 px-3 py-1 rounded-xl border-2 border-slate-700 bg-slate-900 shadow-[2px_2px_0px_0px_#000] text-cyan-300">
+                <Clock className="w-3.5 h-3.5 animate-pulse" />
+                <span className="text-xs font-mono font-black">{clock.timeStr}</span>
+              </div>
             </div>
-            <div className={`flex items-center space-x-1.5 px-3 py-1 rounded-full border ${
-              isNight 
-                ? 'bg-cyan-950/80 border-cyan-800/80 text-cyan-300' 
-                : 'bg-blue-50 border-blue-200/80 text-blue-800'
-            }`}>
-              <Clock className="w-3.5 h-3.5 animate-pulse" />
-              <span className="text-xs font-mono font-bold">{clock.timeStr}</span>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-2 mt-3 pt-1">
-            <div className={`flex flex-col border rounded-lg p-2 text-center ${
-              isNight ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-200/60'
-            }`}>
-              <span className="text-[10px] uppercase font-bold opacity-60">Active Fleet</span>
-              <span className="text-lg font-black font-mono">{activeCounts.total}</span>
+            <div className="grid grid-cols-3 gap-2 mt-3 pt-1">
+              <div className="flex flex-col bg-slate-900 border-2 border-slate-800 shadow-[3px_3px_0px_0px_#000] rounded-xl p-2 text-center">
+                <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Active</span>
+                <span className="text-lg font-black font-mono text-white mt-0.5">{activeCounts.total}</span>
+              </div>
+              <div className="flex flex-col bg-emerald-950/50 border-2 border-emerald-500 shadow-[3px_3px_0px_0px_#000] rounded-xl p-2 text-center">
+                <span className="text-[10px] uppercase font-black text-emerald-400 tracking-wider">LRT</span>
+                <span className="text-lg font-black text-emerald-400 font-mono mt-0.5">
+                  {activeCounts.valley + activeCounts.capital + activeCounts.metro}
+                </span>
+              </div>
+              <div className="flex flex-col bg-sky-950/50 border-2 border-sky-500 shadow-[3px_3px_0px_0px_#000] rounded-xl p-2 text-center">
+                <span className="text-[10px] uppercase font-black text-sky-400 tracking-wider">Buses</span>
+                <span className="text-lg font-black text-sky-400 font-mono mt-0.5">{activeCounts.bus}</span>
+              </div>
             </div>
-            <div className="flex flex-col bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2 text-center">
-              <span className="text-[10px] uppercase font-bold text-emerald-500">LRT Fleet</span>
-              <span className="text-lg font-black text-emerald-400 font-mono">
-                {activeCounts.valley + activeCounts.capital + activeCounts.metro}
-              </span>
-            </div>
-            <div className={`flex flex-col border rounded-lg p-2 text-center ${
-              isNight ? 'bg-sky-500/10 border-sky-500/30 text-sky-300' : 'bg-slate-100/70 border-slate-200/70 text-slate-800'
-            }`}>
-              <span className="text-[10px] uppercase font-bold opacity-70">Buses</span>
-              <span className="text-lg font-black font-mono">{activeCounts.bus}</span>
-            </div>
-          </div>
 
-          <div className="flex flex-wrap gap-1.5 mt-3 pt-2 border-t border-white/10">
-            <div className={`flex items-center space-x-1.5 px-2 py-1 rounded text-[11px] font-medium ${
-              isNight ? 'bg-slate-800 text-sky-300' : 'bg-slate-100 text-slate-800'
-            }`}>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#38bdf8]" />
-              <span>Bus ({activeCounts.bus})</span>
-            </div>
-            <div className="flex items-center space-x-1.5 px-2 py-1 rounded bg-emerald-500/10 text-[11px] font-medium text-emerald-400 border border-emerald-500/30">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
-              <span>Valley ({activeCounts.valley})</span>
-            </div>
-            <div className="flex items-center space-x-1.5 px-2 py-1 rounded bg-blue-500/10 text-[11px] font-medium text-blue-400 border border-blue-500/30">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]" />
-              <span>Capital ({activeCounts.capital})</span>
-            </div>
-            <div className="flex items-center space-x-1.5 px-2 py-1 rounded bg-red-500/10 text-[11px] font-medium text-red-400 border border-red-500/30">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
-              <span>Metro ({activeCounts.metro})</span>
-            </div>
-            <div className="flex items-center space-x-1.5 px-2 py-1 rounded bg-orange-500/10 text-[11px] font-medium text-orange-400 border border-orange-500/30">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" />
-              <span>Regional ({activeCounts.regional})</span>
+            <div className="flex flex-wrap gap-1.5 mt-3 pt-2.5 border-t-2 border-slate-800">
+              <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-slate-900 border-2 border-slate-800 shadow-[2px_2px_0px_0px_#000] text-[11px] font-black text-sky-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#38bdf8] border border-slate-950" />
+                <span>Bus ({activeCounts.bus})</span>
+              </div>
+              <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-emerald-950/60 border-2 border-emerald-500 shadow-[2px_2px_0px_0px_#000] text-[11px] font-black text-emerald-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] border border-slate-950" />
+                <span>Valley ({activeCounts.valley})</span>
+              </div>
+              <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-blue-950/60 border-2 border-blue-500 shadow-[2px_2px_0px_0px_#000] text-[11px] font-black text-blue-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6] border border-slate-950" />
+                <span>Capital ({activeCounts.capital})</span>
+              </div>
+              <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-red-950/60 border-2 border-red-500 shadow-[2px_2px_0px_0px_#000] text-[11px] font-black text-red-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] border border-slate-950" />
+                <span>Metro ({activeCounts.metro})</span>
+              </div>
+              <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-orange-950/60 border-2 border-orange-500 shadow-[2px_2px_0px_0px_#000] text-[11px] font-black text-orange-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#f97316] border border-slate-950" />
+                <span>Regional ({activeCounts.regional})</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
       <div className="absolute top-4 right-16 z-20 hidden md:flex items-center gap-2 pointer-events-auto">
         <button
@@ -830,12 +817,10 @@ export default function DayInEdmontonView() {
               setViewState((prev) => ({ ...prev, pitch: 50 }));
             }
           }}
-          className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-lg border ${
+          className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 ${
             show3DBuildings
-              ? 'bg-blue-600 text-white border-blue-400 ring-2 ring-blue-400/30'
-              : isNight
-                ? 'bg-slate-900/90 text-slate-300 border-slate-700 hover:text-white'
-                : 'bg-white/95 text-slate-700 border-slate-200 hover:text-slate-900'
+              ? 'bg-blue-600 text-white border-blue-400 shadow-[3px_3px_0px_0px_#000]'
+              : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
           }`}
         >
           <Building2 className="w-3.5 h-3.5" />
@@ -847,29 +832,25 @@ export default function DayInEdmontonView() {
             setIsDirectorMode(!isDirectorMode);
             setChaseTripIndex(null);
           }}
-          className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-lg border ${
+          className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 ${
             isDirectorMode
-              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-400 ring-2 ring-purple-400/30 animate-pulse'
-              : isNight
-                ? 'bg-slate-900/90 text-slate-300 border-slate-700 hover:text-white'
-                : 'bg-white/95 text-slate-700 border-slate-200 hover:text-slate-900'
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-400 shadow-[3px_3px_0px_0px_#000] animate-pulse'
+              : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
           }`}
         >
           <Video className="w-3.5 h-3.5" />
           <span>{isDirectorMode ? 'Drone Orbit Active (60°)' : 'Drone 360° Orbit (60°)'}</span>
         </button>
 
-        <div className={`flex items-center backdrop-blur-md border shadow-md rounded-xl p-1 gap-1 ${
-          isNight ? 'bg-slate-900/90 border-slate-700' : 'bg-white/95 border-slate-200'
-        }`}>
+        <div className="flex items-center bg-slate-950 border-2 border-slate-700 shadow-[4px_4px_0px_0px_#000] rounded-xl p-1 gap-1">
           {(['all', 'lrt', 'bus', 'regional'] as const).map((filterKey) => (
             <button
               key={filterKey}
               onClick={() => setSelectedFilter(filterKey)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all capitalize ${
+              className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all capitalize ${
                 selectedFilter === filterKey
-                  ? isNight ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'bg-slate-900 text-white shadow-sm'
-                  : isNight ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-cyan-400 text-slate-950 border-2 border-slate-950 shadow-[1.5px_1.5px_0px_0px_#000]'
+                  : 'text-slate-300 hover:text-white font-extrabold'
               }`}
             >
               {filterKey === 'all' ? 'All' : filterKey === 'lrt' ? 'LRT Only' : filterKey === 'bus' ? 'Buses' : 'Regional'}
@@ -880,18 +861,18 @@ export default function DayInEdmontonView() {
 
       {selectedVehicle && selectedTelemetry && (
         <div className="absolute top-4 right-4 md:right-4 z-30 w-80 max-w-[90vw] pointer-events-auto">
-          <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 shadow-2xl rounded-2xl p-4 text-white animate-in fade-in slide-in-from-right-4 duration-200">
-            <div className="flex items-start justify-between pb-2 border-b border-slate-800">
+          <div className="bg-slate-950/95 border-2 border-slate-700 shadow-[6px_6px_0px_0px_#000] rounded-2xl p-4 text-white animate-in fade-in slide-in-from-right-4 duration-200">
+            <div className="flex items-start justify-between pb-2.5 border-b-2 border-slate-800">
               <div className="flex items-center space-x-2">
-                <span className={`w-3 h-3 rounded-full ${
+                <span className={`w-3.5 h-3.5 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_0px_#000] ${
                   selectedTelemetry.cat === 1 ? 'bg-emerald-500' :
                   selectedTelemetry.cat === 2 ? 'bg-blue-500' :
                   selectedTelemetry.cat === 3 ? 'bg-red-500' :
                   selectedTelemetry.cat === 4 ? 'bg-orange-500' : 'bg-sky-400'
                 }`} />
                 <div>
-                  <h3 className="font-extrabold text-sm tracking-tight text-white">{selectedTelemetry.routeTitle}</h3>
-                  <p className="text-[11px] text-slate-400 line-clamp-1">{selectedTelemetry.headsign}</p>
+                  <h3 className="font-black text-sm tracking-tight text-white uppercase">{selectedTelemetry.routeTitle}</h3>
+                  <p className="text-[11px] font-bold text-slate-400 line-clamp-1">{selectedTelemetry.headsign}</p>
                 </div>
               </div>
               <button
@@ -899,31 +880,31 @@ export default function DayInEdmontonView() {
                   setSelectedVehicle(null);
                   setChaseTripIndex(null);
                 }}
-                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
+                className="p-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 hover:text-white transition hover:bg-slate-800 shadow-[2px_2px_0px_0px_#000]"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="mt-2.5 px-2.5 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-[11px] text-slate-300">
-              <span className="font-semibold text-slate-400">Fleet: </span>
+            <div className="mt-3 px-3 py-1.5 rounded-xl bg-slate-900 border-2 border-slate-800 shadow-[2px_2px_0px_0px_#000] text-xs font-bold text-slate-300">
+              <span className="font-black text-slate-400 uppercase tracking-wider text-[10px]">Fleet: </span>
               {selectedTelemetry.vtype}
             </div>
 
             <div className="grid grid-cols-2 gap-2 mt-2.5">
-              <div className="flex flex-col bg-slate-800/50 border border-slate-700/50 rounded-xl p-2.5 text-center">
-                <div className="flex items-center justify-center space-x-1 text-slate-400 text-[10px] font-bold uppercase">
-                  <Gauge className="w-3 h-3 text-cyan-400" />
+              <div className="flex flex-col bg-slate-900 border-2 border-slate-800 shadow-[3px_3px_0px_0px_#000] rounded-xl p-2.5 text-center">
+                <div className="flex items-center justify-center space-x-1 text-slate-400 text-[10px] font-black uppercase tracking-wider">
+                  <Gauge className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Velocity</span>
                 </div>
                 <span className="text-xl font-black font-mono text-cyan-400 mt-0.5">
-                  {selectedTelemetry.speedKmh} <span className="text-xs font-normal text-slate-400">km/h</span>
+                  {selectedTelemetry.speedKmh} <span className="text-xs font-bold text-slate-400">km/h</span>
                 </span>
               </div>
-              <div className="flex flex-col bg-slate-800/50 border border-slate-700/50 rounded-xl p-2.5 text-center">
-                <div className="flex items-center justify-center space-x-1 text-slate-400 text-[10px] font-bold uppercase">
-                  <Activity className="w-3 h-3 text-emerald-400" />
-                  <span>Trip Progress</span>
+              <div className="flex flex-col bg-slate-900 border-2 border-slate-800 shadow-[3px_3px_0px_0px_#000] rounded-xl p-2.5 text-center">
+                <div className="flex items-center justify-center space-x-1 text-slate-400 text-[10px] font-black uppercase tracking-wider">
+                  <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Progress</span>
                 </div>
                 <span className="text-xl font-black font-mono text-emerald-400 mt-0.5">
                   {selectedTelemetry.progressPct}%
@@ -933,19 +914,19 @@ export default function DayInEdmontonView() {
 
             {selectedTelemetry.upcomingStops.length > 0 && (
               <div className="mt-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Upcoming Stops</span>
-                <div className="mt-1.5 space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Upcoming Scheduled Stops</span>
+                <div className="mt-1.5 space-y-1.5">
                   {selectedTelemetry.upcomingStops.map((st: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-slate-800/40 border border-slate-800">
-                      <span className="text-slate-300 font-medium truncate max-w-[180px]">{st[1]}</span>
-                      <span className="text-[10px] font-mono text-slate-400">{formatSecondsToClock(st[0]).simpleTime}</span>
+                    <div key={idx} className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg bg-slate-900 border-2 border-slate-800 shadow-[2px_2px_0px_0px_#000]">
+                      <span className="text-slate-300 font-extrabold truncate max-w-[180px]">{st[1]}</span>
+                      <span className="text-[10px] font-mono font-black text-amber-400">{formatSecondsToClock(st[0]).simpleTime}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="mt-3 pt-2 border-t border-slate-800 flex gap-2">
+            <div className="mt-3 pt-2.5 border-t-2 border-slate-800 flex gap-2">
               <button
                 onClick={() => {
                   if (chaseTripIndex === selectedVehicle.index) {
@@ -955,10 +936,10 @@ export default function DayInEdmontonView() {
                     setIsDirectorMode(false);
                   }
                 }}
-                className={`flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-xs font-bold transition shadow-md ${
+                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-3 rounded-xl text-xs font-black transition border-2 ${
                   chaseTripIndex === selectedVehicle.index
-                    ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-400/40'
-                    : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950'
+                    ? 'bg-amber-400 text-slate-950 border-slate-950 shadow-[3px_3px_0px_0px_#000]'
+                    : 'bg-cyan-400 hover:bg-cyan-300 text-slate-950 border-slate-950 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
                 }`}
               >
                 <Navigation className="w-3.5 h-3.5" />
@@ -970,52 +951,44 @@ export default function DayInEdmontonView() {
       )}
 
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20 w-11/12 max-w-4xl pointer-events-auto">
-        <div className={`backdrop-blur-xl border shadow-2xl rounded-2xl p-4 md:p-5 flex flex-col gap-3 transition-all duration-500 ${
-          isNight 
-            ? 'bg-slate-900/90 border-slate-700/80 text-white' 
-            : 'bg-white/95 border-slate-200/90 text-slate-900'
-        }`}>
+        <div className="bg-slate-950/95 border-2 border-slate-700 shadow-[6px_6px_0px_0px_#000000] rounded-2xl p-4 md:p-5 flex flex-col gap-3 text-white">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <button
                 onClick={togglePlayPause}
-                className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all ${
+                className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl font-black text-sm transition-all border-2 border-slate-950 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px] ${
                   isPlaying
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white ring-2 ring-amber-400/30'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-500/30'
+                    ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white'
                 }`}
               >
-                {isPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
+                {isPlaying ? <Pause className="w-4 h-4 fill-slate-950" /> : <Play className="w-4 h-4 fill-white" />}
                 <span>{isPlaying ? 'Pause' : 'Play Simulation'}</span>
               </button>
 
               <button
                 onClick={handleReset}
                 title="Restart from 3:30 AM"
-                className={`p-2.5 rounded-xl transition ${
-                  isNight ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
+                className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
             </div>
 
             <div className="flex items-center space-x-2 font-mono text-center">
-              <span className="text-xl md:text-2xl font-black tracking-tight">{clock.timeStr}</span>
+              <span className="text-xl md:text-2xl font-black tracking-tight text-white">{clock.timeStr}</span>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <div className={`flex items-center border rounded-xl p-0.5 ${
-                isNight ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'
-              }`}>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-slate-900 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] rounded-xl p-1 gap-1">
                 {SPEED_OPTIONS.map(({ label, mult }) => (
                   <button
                     key={mult}
                     onClick={() => setSpeedMultiplier(mult)}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
+                    className={`px-2.5 py-1 text-xs font-black rounded-lg transition-all ${
                       speedMultiplier === mult
-                        ? isNight ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-white text-blue-700 shadow-sm font-black'
-                        : isNight ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-cyan-400 text-slate-950 border-2 border-slate-950 shadow-[1.5px_1.5px_0px_0px_#000]'
+                        : 'text-slate-300 hover:text-white font-extrabold'
                     }`}
                   >
                     {label}
@@ -1026,16 +999,14 @@ export default function DayInEdmontonView() {
               <button
                 onClick={toggleFullscreen}
                 title="Toggle Fullscreen"
-                className={`p-2.5 rounded-xl transition ${
-                  isNight ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
+                className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border-2 border-slate-700 shadow-[3px_3px_0px_0px_#000] transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]"
               >
                 {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5 pt-1">
             <input
               type="range"
               min={START_TIME_SEC}
@@ -1043,9 +1014,9 @@ export default function DayInEdmontonView() {
               step={20}
               value={currentTimeSec}
               onChange={handleScrubberChange}
-              className="w-full h-2.5 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-700 transition"
+              className="w-full h-3 bg-slate-800 border-2 border-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.6)] transition"
             />
-            <div className="flex justify-between text-[11px] font-bold opacity-50 px-0.5">
+            <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
               <span>3:30 AM (Early Launch)</span>
               <span>7:00 AM (Morning Rush)</span>
               <span>12:00 PM (Midday)</span>

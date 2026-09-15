@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import Map, { MapRef, NavigationControl, Layer } from 'react-map-gl/mapbox';
 import { 
   Play, Pause, RotateCcw, Maximize, Minimize, Clock, Bus, Train, 
-  FastForward, Compass, Eye, X, Activity, Gauge, Navigation, Sparkles, Video, Building2
+  FastForward, Compass, Eye, X, Activity, Gauge, Navigation, Sparkles, Video, Building2, Zap
 } from 'lucide-react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -167,6 +167,7 @@ export default function DayInEdmontonView() {
   const [isDirectorMode, setIsDirectorMode] = useState<boolean>(false);
   const [chaseTripIndex, setChaseTripIndex] = useState<number | null>(null);
   const [show3DBuildings, setShow3DBuildings] = useState<boolean>(false);
+  const [trailStyle, setTrailStyle] = useState<'classic' | 'streaks'>('classic');
 
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
 
@@ -186,12 +187,14 @@ export default function DayInEdmontonView() {
   const speedMultiplierRef = useRef<number>(1.0);
   const isDirectorRef = useRef<boolean>(false);
   const chaseIndexRef = useRef<number | null>(null);
+  const trailStyleRef = useRef<'classic' | 'streaks'>('classic');
 
   currentTimeRef.current = currentTimeSec;
   isPlayingRef.current = isPlaying;
   speedMultiplierRef.current = speedMultiplier;
   isDirectorRef.current = isDirectorMode;
   chaseIndexRef.current = chaseTripIndex;
+  trailStyleRef.current = trailStyle;
 
   const [viewState, setViewState] = useState({
     longitude: -113.4938,
@@ -460,119 +463,245 @@ export default function DayInEdmontonView() {
       const strokeBase = `rgba(${colorObj.r}, ${colorObj.g}, ${colorObj.b}, `;
       const fillHex = colorObj.hex;
 
-      // 1. Draw Tail Streak
-      if (endTailIdx > startTailIdx) {
-        ctx.lineWidth = (cat === 1 || cat === 2 || cat === 3 ? 2.8 : 1.6) * zoomScale * dpr;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+      const isStreakMode = trailStyleRef.current === 'streaks';
 
-        for (let ptIdx = startTailIdx; ptIdx < endTailIdx; ptIdx++) {
-          const ptA = pts[ptIdx];
-          const ptB = pts[ptIdx + 1];
-          const pA = map.project([ptA[0], ptA[1]]);
-          const pB = map.project([ptB[0], ptB[1]]);
+      if (isStreakMode) {
+        // --- Option 2: Long-Exposure Uniform Light Streaks Mode ---
+        const streakWidth = (cat === 1 || cat === 2 || cat === 3 ? 3.4 : 2.2) * zoomScale * dpr;
 
-          if (
-            (pA.x < -50 && pB.x < -50) ||
-            (pA.x > canvas.width / dpr + 50 && pB.x > canvas.width / dpr + 50) ||
-            (pA.y < -50 && pB.y < -50) ||
-            (pA.y > canvas.height / dpr + 50 && pB.y > canvas.height / dpr + 50)
-          ) {
+        // 1. Draw Luminous Light Streak Ribbon
+        if (endTailIdx > startTailIdx) {
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          for (let ptIdx = startTailIdx; ptIdx < endTailIdx; ptIdx++) {
+            const ptA = pts[ptIdx];
+            const ptB = pts[ptIdx + 1];
+            const pA = map.project([ptA[0], ptA[1]]);
+            const pB = map.project([ptB[0], ptB[1]]);
+
+            if (
+              (pA.x < -50 && pB.x < -50) ||
+              (pA.x > canvas.width / dpr + 50 && pB.x > canvas.width / dpr + 50) ||
+              (pA.y < -50 && pB.y < -50) ||
+              (pA.y > canvas.height / dpr + 50 && pB.y > canvas.height / dpr + 50)
+            ) {
+              continue;
+            }
+
+            const ptTime = s + ptIdx * interval;
+            const ageSec = tSec - ptTime;
+            const maxAlpha = 0.95 + solar.paletteBlend * 0.05;
+            const alpha = Math.max(0, Math.min(maxAlpha, (1 - (ageSec / TAIL_DURATION_SEC)) * maxAlpha));
+
+            // Soft glow aura
+            ctx.beginPath();
+            ctx.lineWidth = streakWidth * 2.2;
+            ctx.strokeStyle = `${strokeBase}${(alpha * 0.25).toFixed(2)})`;
+            ctx.moveTo(pA.x * dpr, pA.y * dpr);
+            ctx.lineTo(pB.x * dpr, pB.y * dpr);
+            ctx.stroke();
+
+            // Saturated light streak body
+            ctx.beginPath();
+            ctx.lineWidth = streakWidth;
+            ctx.strokeStyle = `${strokeBase}${alpha.toFixed(2)})`;
+            ctx.moveTo(pA.x * dpr, pA.y * dpr);
+            ctx.lineTo(pB.x * dpr, pB.y * dpr);
+            ctx.stroke();
+
+            // Laser hot core line
+            ctx.beginPath();
+            ctx.lineWidth = streakWidth * 0.35;
+            ctx.strokeStyle = `rgba(255, 255, 255, ${(alpha * 0.85).toFixed(2)})`;
+            ctx.moveTo(pA.x * dpr, pA.y * dpr);
+            ctx.lineTo(pB.x * dpr, pB.y * dpr);
+            ctx.stroke();
+          }
+        }
+
+        // 2. Leading Tip (No bulbous head dot)
+        if (isCurrentlyActive && exactIdx >= 0 && exactIdx < numPts) {
+          const floorIdx = Math.floor(exactIdx);
+          const ceilIdx = Math.min(numPts - 1, floorIdx + 1);
+          const frac = exactIdx - floorIdx;
+
+          const pt0 = pts[floorIdx];
+          const pt1 = pts[ceilIdx];
+
+          const currLon = pt0[0] + frac * (pt1[0] - pt0[0]);
+          const currLat = pt0[1] + frac * (pt1[1] - pt0[1]);
+
+          const screenPos = map.project([currLon, currLat]);
+          const sx = screenPos.x * dpr;
+          const sy = screenPos.y * dpr;
+
+          if (sx >= -40 && sx <= canvas.width + 40 && sy >= -40 && sy <= canvas.height + 40) {
+            const pAhead = map.project([pt1[0], pt1[1]]);
+            const angle = Math.atan2((pAhead.y - screenPos.y), (pAhead.x - screenPos.x));
+
+            // Headlight Cone
+            if (solar.headlightIntensity > 0.04) {
+              const beamLen = (14 + zoom * 1.6) * dpr;
+              const beamHalfAngle = 0.25;
+              const beamAlpha = 0.22 * solar.headlightIntensity;
+
+              const grad = ctx.createRadialGradient(sx, sy, 1.5 * dpr, sx, sy, beamLen);
+              grad.addColorStop(0, `rgba(255, 255, 220, ${beamAlpha.toFixed(3)})`);
+              grad.addColorStop(0.5, `rgba(255, 245, 180, ${(beamAlpha * 0.35).toFixed(3)})`);
+              grad.addColorStop(1.0, 'rgba(255, 245, 180, 0.0)');
+
+              ctx.beginPath();
+              ctx.moveTo(sx, sy);
+              ctx.arc(sx, sy, beamLen, angle - beamHalfAngle, angle + beamHalfAngle);
+              ctx.closePath();
+              ctx.fillStyle = grad;
+              ctx.fill();
+            }
+
+            // Crisp laser leading tip (flush with beam width)
+            ctx.beginPath();
+            ctx.arc(sx, sy, streakWidth * 0.75, 0, Math.PI * 2);
+            ctx.fillStyle = fillHex;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(sx, sy, streakWidth * 0.4, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+
+            if (selectedIdx === i) {
+              const reticleRad = (streakWidth * 3.8) + Math.sin(tSec * 4) * 2 * dpr;
+              ctx.beginPath();
+              ctx.arc(sx, sy, reticleRad, 0, Math.PI * 2);
+              ctx.lineWidth = 2 * dpr;
+              ctx.strokeStyle = '#f59e0b';
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.arc(sx, sy, reticleRad * 1.3, 0, Math.PI * 2);
+              ctx.lineWidth = 1 * dpr;
+              ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+              ctx.stroke();
+            }
+          }
+        }
+      } else {
+        // --- Classic Particles Mode (Original Untouched) ---
+        // 1. Draw Tail Streak
+        if (endTailIdx > startTailIdx) {
+          ctx.lineWidth = (cat === 1 || cat === 2 || cat === 3 ? 2.8 : 1.6) * zoomScale * dpr;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          for (let ptIdx = startTailIdx; ptIdx < endTailIdx; ptIdx++) {
+            const ptA = pts[ptIdx];
+            const ptB = pts[ptIdx + 1];
+            const pA = map.project([ptA[0], ptA[1]]);
+            const pB = map.project([ptB[0], ptB[1]]);
+
+            if (
+              (pA.x < -50 && pB.x < -50) ||
+              (pA.x > canvas.width / dpr + 50 && pB.x > canvas.width / dpr + 50) ||
+              (pA.y < -50 && pB.y < -50) ||
+              (pA.y > canvas.height / dpr + 50 && pB.y > canvas.height / dpr + 50)
+            ) {
+              continue;
+            }
+
+            const ptTime = s + ptIdx * interval;
+            const ageSec = tSec - ptTime;
+            const maxAlpha = 0.85 + solar.paletteBlend * 0.12;
+            const alpha = Math.max(0, Math.min(maxAlpha, (1 - (ageSec / TAIL_DURATION_SEC)) * maxAlpha));
+
+            ctx.beginPath();
+            ctx.strokeStyle = `${strokeBase}${alpha.toFixed(2)})`;
+            ctx.moveTo(pA.x * dpr, pA.y * dpr);
+            ctx.lineTo(pB.x * dpr, pB.y * dpr);
+            ctx.stroke();
+          }
+        }
+
+        // 2. Draw Current Vehicle Head Dot & Gradual Headlight Cones
+        if (isCurrentlyActive && exactIdx >= 0 && exactIdx < numPts) {
+          const floorIdx = Math.floor(exactIdx);
+          const ceilIdx = Math.min(numPts - 1, floorIdx + 1);
+          const frac = exactIdx - floorIdx;
+
+          const pt0 = pts[floorIdx];
+          const pt1 = pts[ceilIdx];
+
+          const currLon = pt0[0] + frac * (pt1[0] - pt0[0]);
+          const currLat = pt0[1] + frac * (pt1[1] - pt0[1]);
+
+          const screenPos = map.project([currLon, currLat]);
+          const sx = screenPos.x * dpr;
+          const sy = screenPos.y * dpr;
+
+          if (sx < -40 || sx > canvas.width + 40 || sy < -40 || sy > canvas.height + 40) {
             continue;
           }
 
-          const ptTime = s + ptIdx * interval;
-          const ageSec = tSec - ptTime;
-          const maxAlpha = 0.85 + solar.paletteBlend * 0.12;
-          const alpha = Math.max(0, Math.min(maxAlpha, (1 - (ageSec / TAIL_DURATION_SEC)) * maxAlpha));
+          const rad = (cat === 1 || cat === 2 || cat === 3) ? lrtRadius : (cat === 4 ? regionalRadius : busRadius);
 
+          const pAhead = map.project([pt1[0], pt1[1]]);
+          const angle = Math.atan2((pAhead.y - screenPos.y), (pAhead.x - screenPos.x));
+
+          // Gradual Headlight Cone (50% softened intensity)
+          if (solar.headlightIntensity > 0.04) {
+            const beamLen = (14 + zoom * 1.6) * dpr;
+            const beamHalfAngle = 0.25;
+            const beamAlpha = 0.22 * solar.headlightIntensity;
+
+            const grad = ctx.createRadialGradient(sx, sy, 1.5 * dpr, sx, sy, beamLen);
+            grad.addColorStop(0, `rgba(255, 255, 220, ${beamAlpha.toFixed(3)})`);
+            grad.addColorStop(0.5, `rgba(255, 245, 180, ${(beamAlpha * 0.35).toFixed(3)})`);
+            grad.addColorStop(1.0, 'rgba(255, 245, 180, 0.0)');
+
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.arc(sx, sy, beamLen, angle - beamHalfAngle, angle + beamHalfAngle);
+            ctx.closePath();
+            ctx.fillStyle = grad;
+            ctx.fill();
+          }
+
+          // Glow ring
+          const glowOpacity = Math.max(
+            cat === 1 || cat === 2 || cat === 3 ? 0.28 : 0.0,
+            solar.paletteBlend * 0.38
+          );
+          if (glowOpacity > 0.04) {
+            ctx.beginPath();
+            ctx.arc(sx, sy, rad * (1.6 + solar.paletteBlend * 0.6), 0, Math.PI * 2);
+            ctx.fillStyle = `${strokeBase}${glowOpacity.toFixed(2)})`;
+            ctx.fill();
+          }
+
+          // Solid core dot
           ctx.beginPath();
-          ctx.strokeStyle = `${strokeBase}${alpha.toFixed(2)})`;
-          ctx.moveTo(pA.x * dpr, pA.y * dpr);
-          ctx.lineTo(pB.x * dpr, pB.y * dpr);
-          ctx.stroke();
-        }
-      }
-
-      // 2. Draw Current Vehicle Head Dot & Gradual Headlight Cones
-      if (isCurrentlyActive && exactIdx >= 0 && exactIdx < numPts) {
-        const floorIdx = Math.floor(exactIdx);
-        const ceilIdx = Math.min(numPts - 1, floorIdx + 1);
-        const frac = exactIdx - floorIdx;
-
-        const pt0 = pts[floorIdx];
-        const pt1 = pts[ceilIdx];
-
-        const currLon = pt0[0] + frac * (pt1[0] - pt0[0]);
-        const currLat = pt0[1] + frac * (pt1[1] - pt0[1]);
-
-        const screenPos = map.project([currLon, currLat]);
-        const sx = screenPos.x * dpr;
-        const sy = screenPos.y * dpr;
-
-        if (sx < -40 || sx > canvas.width + 40 || sy < -40 || sy > canvas.height + 40) {
-          continue;
-        }
-
-        const rad = (cat === 1 || cat === 2 || cat === 3) ? lrtRadius : (cat === 4 ? regionalRadius : busRadius);
-
-        const pAhead = map.project([pt1[0], pt1[1]]);
-        const angle = Math.atan2((pAhead.y - screenPos.y), (pAhead.x - screenPos.x));
-
-        // Gradual Headlight Cone (50% softened intensity)
-        if (solar.headlightIntensity > 0.04) {
-          const beamLen = (14 + zoom * 1.6) * dpr;
-          const beamHalfAngle = 0.25;
-          const beamAlpha = 0.22 * solar.headlightIntensity;
-
-          const grad = ctx.createRadialGradient(sx, sy, 1.5 * dpr, sx, sy, beamLen);
-          grad.addColorStop(0, `rgba(255, 255, 220, ${beamAlpha.toFixed(3)})`);
-          grad.addColorStop(0.5, `rgba(255, 245, 180, ${(beamAlpha * 0.35).toFixed(3)})`);
-          grad.addColorStop(1.0, 'rgba(255, 245, 180, 0.0)');
-
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.arc(sx, sy, beamLen, angle - beamHalfAngle, angle + beamHalfAngle);
-          ctx.closePath();
-          ctx.fillStyle = grad;
+          ctx.arc(sx, sy, rad, 0, Math.PI * 2);
+          ctx.fillStyle = fillHex;
           ctx.fill();
-        }
 
-        // Glow ring
-        const glowOpacity = Math.max(
-          cat === 1 || cat === 2 || cat === 3 ? 0.28 : 0.0,
-          solar.paletteBlend * 0.38
-        );
-        if (glowOpacity > 0.04) {
-          ctx.beginPath();
-          ctx.arc(sx, sy, rad * (1.6 + solar.paletteBlend * 0.6), 0, Math.PI * 2);
-          ctx.fillStyle = `${strokeBase}${glowOpacity.toFixed(2)})`;
-          ctx.fill();
-        }
-
-        // Solid core dot
-        ctx.beginPath();
-        ctx.arc(sx, sy, rad, 0, Math.PI * 2);
-        ctx.fillStyle = fillHex;
-        ctx.fill();
-
-        ctx.lineWidth = 1.2 * dpr;
-        ctx.strokeStyle = '#ffffff';
-        ctx.stroke();
-
-        if (selectedIdx === i) {
-          const reticleRad = (rad * 2.8) + Math.sin(tSec * 4) * 2 * dpr;
-          ctx.beginPath();
-          ctx.arc(sx, sy, reticleRad, 0, Math.PI * 2);
-          ctx.lineWidth = 2 * dpr;
-          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 1.2 * dpr;
+          ctx.strokeStyle = '#ffffff';
           ctx.stroke();
 
-          ctx.beginPath();
-          ctx.arc(sx, sy, reticleRad * 1.3, 0, Math.PI * 2);
-          ctx.lineWidth = 1 * dpr;
-          ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
-          ctx.stroke();
+          if (selectedIdx === i) {
+            const reticleRad = (rad * 2.8) + Math.sin(tSec * 4) * 2 * dpr;
+            ctx.beginPath();
+            ctx.arc(sx, sy, reticleRad, 0, Math.PI * 2);
+            ctx.lineWidth = 2 * dpr;
+            ctx.strokeStyle = '#f59e0b';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(sx, sy, reticleRad * 1.3, 0, Math.PI * 2);
+            ctx.lineWidth = 1 * dpr;
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+            ctx.stroke();
+          }
         }
       }
     }
@@ -830,6 +959,21 @@ export default function DayInEdmontonView() {
       )}
 
       <div className="absolute top-4 right-16 z-20 hidden md:flex items-center gap-2 pointer-events-auto">
+        <button
+          onClick={() => {
+            setTrailStyle((prev) => (prev === 'classic' ? 'streaks' : 'classic'));
+          }}
+          title="Toggle between Classic Particles and Long-Exposure Light Streaks"
+          className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 ${
+            trailStyle === 'streaks'
+              ? 'bg-amber-400 text-slate-950 border-slate-950 shadow-[3px_3px_0px_0px_#000]'
+              : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[2px] active:translate-y-[2px]'
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5" />
+          <span>{trailStyle === 'streaks' ? 'Light Streaks' : 'Classic Dots'}</span>
+        </button>
+
         <button
           onClick={() => {
             const next = !show3DBuildings;

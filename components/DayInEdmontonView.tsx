@@ -2,10 +2,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import Map, { MapRef, NavigationControl } from 'react-map-gl/mapbox';
+import Map, { MapRef, NavigationControl, Layer } from 'react-map-gl/mapbox';
 import { 
   Play, Pause, RotateCcw, Maximize, Minimize, Clock, Bus, Train, 
-  FastForward, Compass, Eye, X, Activity, Gauge, Navigation, Sparkles, Video
+  FastForward, Compass, Eye, X, Activity, Gauge, Navigation, Sparkles, Video, Building2
 } from 'lucide-react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -166,6 +166,7 @@ export default function DayInEdmontonView() {
 
   const [isDirectorMode, setIsDirectorMode] = useState<boolean>(false);
   const [chaseTripIndex, setChaseTripIndex] = useState<number | null>(null);
+  const [show3DBuildings, setShow3DBuildings] = useState<boolean>(false);
 
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
 
@@ -696,9 +697,41 @@ export default function DayInEdmontonView() {
         mapStyle="mapbox://styles/mapbox/light-v11"
         style={{ width: '100%', height: '100%' }}
         minZoom={9.5}
-        maxZoom={16.5}
+        maxZoom={17.5}
       >
         <NavigationControl position="top-right" />
+        {show3DBuildings && (
+          <Layer
+            id="3d-buildings-extrusion"
+            source="composite"
+            source-layer="building"
+            filter={['==', 'extrude', 'true']}
+            type="fill-extrusion"
+            minzoom={12}
+            paint={{
+              'fill-extrusion-color': isNight ? '#334155' : '#cbd5e1',
+              'fill-extrusion-height': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                12,
+                0,
+                12.5,
+                ['get', 'height']
+              ],
+              'fill-extrusion-base': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                12,
+                0,
+                12.5,
+                ['get', 'min_height']
+              ],
+              'fill-extrusion-opacity': 0.8
+            }}
+          />
+        )}
       </Map>
 
       <canvas
@@ -782,6 +815,26 @@ export default function DayInEdmontonView() {
       )}
 
       <div className="absolute top-4 right-16 z-20 hidden md:flex items-center gap-2 pointer-events-auto">
+        <button
+          onClick={() => {
+            const next = !show3DBuildings;
+            setShow3DBuildings(next);
+            if (next && viewState.pitch === 0) {
+              setViewState((prev) => ({ ...prev, pitch: 50 }));
+            }
+          }}
+          className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-lg border ${
+            show3DBuildings
+              ? 'bg-blue-600 text-white border-blue-400 ring-2 ring-blue-400/30'
+              : isNight
+                ? 'bg-slate-900/90 text-slate-300 border-slate-700 hover:text-white'
+                : 'bg-white/95 text-slate-700 border-slate-200 hover:text-slate-900'
+          }`}
+        >
+          <Building2 className="w-3.5 h-3.5" />
+          <span>{show3DBuildings ? '3D Buildings On' : '3D Buildings'}</span>
+        </button>
+
         <button
           onClick={() => {
             setIsDirectorMode(!isDirectorMode);

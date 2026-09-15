@@ -513,15 +513,15 @@ export default function DayInEdmontonView() {
         const pAhead = map.project([pt1[0], pt1[1]]);
         const angle = Math.atan2((pAhead.y - screenPos.y), (pAhead.x - screenPos.x));
 
-        // Gradual Headlight Cone
+        // Gradual Headlight Cone (50% softened intensity)
         if (solar.headlightIntensity > 0.04) {
-          const beamLen = (18 + zoom * 2.2) * dpr;
-          const beamHalfAngle = 0.30;
-          const beamAlpha = 0.45 * solar.headlightIntensity;
+          const beamLen = (14 + zoom * 1.6) * dpr;
+          const beamHalfAngle = 0.25;
+          const beamAlpha = 0.22 * solar.headlightIntensity;
 
-          const grad = ctx.createRadialGradient(sx, sy, 2 * dpr, sx, sy, beamLen);
+          const grad = ctx.createRadialGradient(sx, sy, 1.5 * dpr, sx, sy, beamLen);
           grad.addColorStop(0, `rgba(255, 255, 220, ${beamAlpha.toFixed(3)})`);
-          grad.addColorStop(0.5, `rgba(255, 245, 180, ${(beamAlpha * 0.4).toFixed(3)})`);
+          grad.addColorStop(0.5, `rgba(255, 245, 180, ${(beamAlpha * 0.35).toFixed(3)})`);
           grad.addColorStop(1.0, 'rgba(255, 245, 180, 0.0)');
 
           ctx.beginPath();

@@ -430,18 +430,22 @@ export default function DayInEdmontonView() {
           bearing: bearing,
           duration: 30
         });
-      } else {
-        setChaseTripIndex(null);
-      }
     } else if (isDirectorRef.current) {
-      const simH = (tSec % 86400) / 3600.0;
-      const targetHotspot = DIRECTOR_HOTSPOTS.find(h => simH >= h.startH && simH < h.endH) || DIRECTOR_HOTSPOTS[0];
+      // Cinematic Drone Orbit tracking along Anthony Henday ring looking inwards at 60° pitch
+      const orbitSpeedFactor = 2.0; // 2 complete panoramic rotations across 24h
+      const orbitAngle = (tSec / 86400.0) * Math.PI * 2 * orbitSpeedFactor;
+      
+      // Gentle breathing focal shift around central core
+      const focalLng = -113.4938 + Math.cos(orbitAngle) * 0.015;
+      const focalLat = 53.5461 + Math.sin(orbitAngle) * 0.010;
+      const droneBearing = (orbitAngle * 180.0 / Math.PI) % 360;
+
       map.easeTo({
-        center: [targetHotspot.lng, targetHotspot.lat],
-        zoom: targetHotspot.zoom,
-        pitch: targetHotspot.pitch,
-        bearing: targetHotspot.bearing + Math.sin(tSec * 0.02) * 8,
-        duration: 100
+        center: [focalLng, focalLat],
+        zoom: 11.6,
+        pitch: 60,
+        bearing: droneBearing,
+        duration: 35
       });
     }
 
@@ -828,7 +832,7 @@ export default function DayInEdmontonView() {
           }`}
         >
           <Video className="w-3.5 h-3.5" />
-          <span>{isDirectorMode ? 'Director 3D Active' : 'Director 3D Mode'}</span>
+          <span>{isDirectorMode ? 'Drone Orbit Active (60°)' : 'Drone 360° Orbit (60°)'}</span>
         </button>
 
         <div className={`flex items-center backdrop-blur-md border shadow-md rounded-xl p-1 gap-1 ${

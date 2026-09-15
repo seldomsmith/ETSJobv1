@@ -134,18 +134,19 @@ const PALETTE_RGB = {
 };
 
 function formatSecondsToClock(totalSeconds: number) {
-  const clamped = Math.max(0, Math.min(86399, Math.floor(totalSeconds)));
-  const h = Math.floor(clamped / 3600);
-  const m = Math.floor((clamped % 3600) / 60);
-  const s = Math.floor(clamped % 60);
-  const period = h >= 12 ? 'PM' : 'AM';
-  const displayH = h % 12 === 0 ? 12 : h % 12;
+  const normSec = Math.max(0, Math.floor(totalSeconds));
+  const rawH = Math.floor(normSec / 3600);
+  const m = Math.floor((normSec % 3600) / 60);
+  const s = Math.floor(normSec % 60);
+  const h24 = rawH % 24;
+  const period = h24 >= 12 ? 'PM' : 'AM';
+  const displayH = h24 % 12 === 0 ? 12 : h24 % 12;
   const padM = m.toString().padStart(2, '0');
   const padS = s.toString().padStart(2, '0');
   return {
     timeStr: `${displayH}:${padM}:${padS} ${period}`,
     simpleTime: `${displayH}:${padM} ${period}`,
-    h, m, s, period
+    h: h24, m, s, period, rawH
   };
 }
 
@@ -170,6 +171,23 @@ export default function DayInEdmontonView() {
   const [trailStyle, setTrailStyle] = useState<'classic' | 'streaks'>('classic');
 
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
+
+  const maxSimulationSec = useMemo(() => {
+    if (!data || !data.trajectories || data.trajectories.length === 0) return 86400;
+    const interval = data.interval || 20;
+    let maxT = 86400;
+    for (let i = 0; i < data.trajectories.length; i++) {
+      const trip = data.trajectories[i];
+      const endT = trip.s + (trip.pts.length - 1) * interval;
+      if (endT > maxT) {
+        maxT = endT;
+      }
+    }
+    return maxT + 120; // 2 minute buffer after last late-night vehicle terminates
+  }, [data]);
+
+  const maxSimulationSecRef = useRef<number>(86400);
+  maxSimulationSecRef.current = maxSimulationSec;
 
   const [activeCounts, setActiveCounts] = useState({
     total: 0,
@@ -401,7 +419,8 @@ export default function DayInEdmontonView() {
         setChaseTripIndex(null);
       }
     } else if (isDirectorRef.current) {
-      const simProgress = Math.max(0, (tSec - START_TIME_SEC) / (86400 - START_TIME_SEC));
+      const simSpan = Math.max(1, maxSimulationSecRef.current - START_TIME_SEC);
+      const simProgress = Math.max(0, Math.min(1.0, (tSec - START_TIME_SEC) / simSpan));
       const orbitSpeedFactor = 2.0;
       const orbitAngle = simProgress * Math.PI * 2 * orbitSpeedFactor;
       
@@ -722,9 +741,11 @@ export default function DayInEdmontonView() {
     lastTimestampRef.current = timestamp;
 
     if (isPlayingRef.current) {
-      const deltaSimSec = (deltaMs / 1000.0) * SIM_SPEED_BASE * speedMultiplierRef.current;
+      const simSpan = Math.max(1, maxSimulationSecRef.current - START_TIME_SEC);
+      const simSpeed = (simSpan / DEFAULT_LOOP_REAL_SEC) * speedMultiplierRef.current;
+      const deltaSimSec = (deltaMs / 1000.0) * simSpeed;
       let nextTime = currentTimeRef.current + deltaSimSec;
-      if (nextTime >= DURATION_24H_SEC) {
+      if (nextTime >= maxSimulationSecRef.current) {
         nextTime = START_TIME_SEC;
       }
       currentTimeRef.current = nextTime;
@@ -1175,18 +1196,19 @@ export default function DayInEdmontonView() {
             <input
               type="range"
               min={START_TIME_SEC}
-              max={86340}
+              max={maxSimulationSec}
               step={20}
               value={currentTimeSec}
               onChange={handleScrubberChange}
               className="w-full h-3 bg-slate-800 border-2 border-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.6)] transition"
             />
             <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
-              <span>3:30 AM (Early Launch)</span>
+              <span>3:30 AM (Launch)</span>
               <span>7:00 AM (Morning Rush)</span>
               <span>12:00 PM (Midday)</span>
               <span>5:00 PM (Evening Rush)</span>
-              <span>11:59 PM (Night Glow)</span>
+              <span>12:00 AM (Midnight)</span>
+              <span>{formatSecondsToClock(maxSimulationSec).simpleTime} (Final Run)</span>
             </div>
           </div>
         </div>
